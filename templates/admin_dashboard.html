@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Control Center | MFS Payment Gateway</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Chart.js for real-time visual analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fdf2f8',
+                            100: '#fce7f3',
+                            500: '#ec4899',
+                            600: '#db2777',
+                            700: '#be185d',
+                        },
+                        mfs: {
+                            bkash: '#E2136E',
+                            nagad: '#F7941D',
+                            rocket: '#8C3494',
+                            cellfin: '#00693E',
+                            upay: '#FFCD00',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .sidebar-item.active {
+            background: linear-gradient(90deg, rgba(226, 19, 110, 0.08) 0%, rgba(247, 148, 29, 0.04) 100%);
+            border-left: 4px solid #e2136e;
+            color: #db2777;
+            font-weight: 600;
+        }
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex antialiased selection:bg-rose-500 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed top-5 right-5 z-50 bg-white border border-slate-200 text-slate-900 text-xs font-semibold px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 transition-all duration-300 opacity-0 pointer-events-none translate-y-2">
+        <span id="toast-icon" class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+        <span id="toast-msg">Notification</span>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 1. SIDEBAR NAVIGATION (CLEAN WHITE THEME) -->
+    <!-- ========================================================================= -->
+    <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all duration-300 z-30 fixed inset-y-0 left-0 lg:static -translate-x-full lg:translate-x-0 shadow-sm">
+        <!-- Top Branding -->
+        <div>
+            <div class="h-16 px-6 flex items-center justify-between border-b border-slate-100">
+                <a href="/admin-dashboard/" class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 via-pink-600 to-orange-500 flex items-center justify-center text-white shadow-md shadow-rose-500/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2l8 4.5v6c0 5-3.5 9-8 10.5-4.5-1.5-8-5.5-8-10.5v-6l8-4.5z"></path></svg>
+                    </div>
+                    <div>
+                        <div class="text-sm font-heading font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
+                            MFS GATEWAY
+                        </div>
+                        <div class="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Admin Control</div>
+                    </div>
+                </a>
+                <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-slate-700 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="p-4 space-y-1 text-xs">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 py-2">Analytics & Ops</div>
+
+                <button onclick="switchTab('overview')" id="nav-overview" class="sidebar-item active w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition group">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        <span>Dashboard Overview</span>
+                    </div>
+                </button>
+
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-4 pb-2">Management (No Django Admin Needed)</div>
+
+                <button onclick="switchTab('merchants')" id="nav-merchants" class="sidebar-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition group">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                        <span>Merchants & Tenants</span>
+                    </div>
+                    <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ merchants|length }}</span>
+                </button>
+
+                <button onclick="switchTab('invoices')" id="nav-invoices" class="sidebar-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition group">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>Invoices & Checkouts</span>
+                    </div>
+                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ total_invoices_count }}</span>
+                </button>
+
+                <button onclick="switchTab('payment-methods')" id="nav-payment-methods" class="sidebar-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition group">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                        <span>Payment Methods</span>
+                    </div>
+                    <span class="bg-pink-50 text-pink-700 border border-pink-200 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ payment_methods|length }}</span>
+                </button>
+
+                <button onclick="switchTab('devices')" id="nav-devices" class="sidebar-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition group">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <span>Android Bridge Nodes</span>
+                    </div>
+                    <span class="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ devices|length }}</span>
+                </button>
+
+                <button onclick="switchTab('sms-logs')" id="nav-sms-logs" class="sidebar-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition group">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                        <span>Raw SMS Ingest Logs</span>
+                    </div>
+                    <span class="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ sms_logs|length }}</span>
+                </button>
+
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-4 pb-2">Simulator & Testing</div>
+
+                <button onclick="switchTab('sandbox')" id="nav-sandbox" class="sidebar-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition group">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <span>API Sandbox Simulator</span>
+                    </div>
+                    <span class="bg-cyan-50 text-cyan-700 border border-cyan-200 text-[9px] font-bold px-1.5 py-0.5 rounded">3-STEP</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Bottom Links -->
+        <div class="p-4 border-t border-slate-100 bg-slate-50/50 space-y-2 text-xs">
+            <a href="/dashboard/" class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200 transition">
+                <span class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Merchant PWA
+                </span>
+                <span class="text-[10px] text-slate-400 font-mono">/dashboard/</span>
+            </a>
+            <a href="/admin/" target="_blank" class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-500 hover:bg-white hover:text-slate-800 border border-transparent hover:border-slate-200 transition">
+                <span class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Django Core Admin
+                </span>
+                <span class="text-[10px] text-slate-400">admin123</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-20 hidden lg:hidden"></div>
+
+    <!-- ========================================================================= -->
+    <!-- 2. MAIN VIEW CONTAINER -->
+    <!-- ========================================================================= -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto custom-scrollbar">
+
+        <!-- Top Header Bar -->
+        <header class="h-16 px-6 bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-10 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="lg:hidden text-slate-500 hover:text-slate-800 p-1.5 rounded-lg border border-slate-200 bg-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <div>
+                    <h1 id="page-title" class="text-base font-bold text-slate-900">Dashboard Overview</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">Real-time system telemetry and direct resource management</p>
+                </div>
+            </div>
+
+            <!-- Quick Action Badges -->
+            <div class="flex items-center gap-3">
+                <div class="hidden md:flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-3 py-1.5 rounded-full text-xs font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Gateway Online &amp; Ready
+                </div>
+                <!-- Global Add Action Button (changes with tab) -->
+                <button id="header-action-btn" onclick="openCreateModal()" class="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                    <span id="header-action-label">New Action</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Body -->
+        <main class="p-6 space-y-6">
+
+            <!-- ============================================================= -->
+            <!-- TAB 1: OVERVIEW & SYSTEM KPIS -->
+            <!-- ============================================================= -->
+            <section id="tab-overview" class="tab-content space-y-6">
+                <!-- 4 Top KPI Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Total Volume -->
+                    <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                        <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                            <span>Settled Volume</span>
+                            <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">৳</span>
+                        </div>
+                        <div class="text-2xl font-extrabold text-slate-900 tracking-tight">৳ {{ total_volume|floatformat:2 }}</div>
+                        <div class="text-[11px] text-emerald-600 font-semibold mt-2 flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            {{ completed_count }} Invoices Settled
+                        </div>
+                    </div>
+
+                    <!-- Invoices Count -->
+                    <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                        <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                            <span>Total Invoices</span>
+                            <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">#</span>
+                        </div>
+                        <div class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ total_invoices_count }}</div>
+                        <div class="text-[11px] text-slate-500 mt-2 flex items-center gap-2">
+                            <span class="text-amber-600 font-semibold">{{ pending_count }} Pending</span>
+                            <span>•</span>
+                            <span class="text-rose-600 font-semibold">{{ expired_count }} Expired</span>
+                        </div>
+                    </div>
+
+                    <!-- Active Merchants -->
+                    <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                        <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                            <span>Registered Merchants</span>
+                            <span class="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">🏢</span>
+                        </div>
+                        <div class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ merchants|length }}</div>
+                        <div class="text-[11px] text-purple-600 font-semibold mt-2">
+                            Independent Tenants
+                        </div>
+                    </div>
+
+                    <!-- Connected Android Forwarders -->
+                    <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                        <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                            <span>Android SMS Bridges</span>
+                            <span class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">📱</span>
+                        </div>
+                        <div class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ active_devices_count }}</div>
+                        <div class="text-[11px] text-amber-600 font-semibold mt-2 flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            Live Forwarder Nodes
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Grid: Chart + Quick Action Hub -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Chart.js MFS Provider Distribution -->
+                    <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-bold text-slate-900">MFS Provider Numbers</h3>
+                                <span class="text-xs text-slate-400">{{ payment_methods|length }} Total</span>
+                            </div>
+                            <div class="relative h-48 flex items-center justify-center">
+                                <canvas id="providerChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-4 text-xs">
+                            <div class="flex items-center gap-2 p-2 rounded-xl bg-pink-50 border border-pink-200 text-pink-700">
+                                <span class="w-2.5 h-2.5 rounded-full bg-[#E2136E]"></span>
+                                <span class="font-semibold">bKash: {{ bkash_count }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
+                                <span class="w-2.5 h-2.5 rounded-full bg-[#F7941D]"></span>
+                                <span class="font-semibold">Nagad: {{ nagad_count }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-700">
+                                <span class="w-2.5 h-2.5 rounded-full bg-[#8C3494]"></span>
+                                <span class="font-semibold">Rocket: {{ rocket_count }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700">
+                                <span class="w-2.5 h-2.5 rounded-full bg-[#00693E]"></span>
+                                <span class="font-semibold">Cellfin: {{ cellfin_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Direct Quick Management Actions (No Django Admin Needed) -->
+                    <div class="glass-card p-5 rounded-2xl lg:col-span-2 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-900">Direct Control Hub</h3>
+                                    <p class="text-xs text-slate-500">Manage everything without needing the Django admin panel</p>
+                                </div>
+                                <span class="text-[10px] bg-rose-50 text-rose-600 border border-rose-200 font-bold px-2 py-0.5 rounded-full uppercase">Instant Actions</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <!-- Create Merchant Button -->
+                                <button onclick="openModal('modal-add-merchant')" class="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 text-left transition group bg-white">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                                            +
+                                        </div>
+                                        <div>
+                                            <div class="text-xs font-bold text-slate-800">Add New Merchant</div>
+                                            <div class="text-[11px] text-slate-500">Create tenant & generate API keys</div>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <!-- Add Payment Method Button -->
+                                <button onclick="openModal('modal-add-pm')" class="p-3.5 rounded-xl border border-slate-200 hover:border-pink-400 hover:bg-pink-50/50 text-left transition group bg-white">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                                            ৳
+                                        </div>
+                                        <div>
+                                            <div class="text-xs font-bold text-slate-800">Add Payment Number</div>
+                                            <div class="text-[11px] text-slate-500">bKash, Nagad, Rocket, Cellfin</div>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <!-- Add Device Bridge Button -->
+                                <button onclick="openModal('modal-add-device')" class="p-3.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 text-left transition group bg-white">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                                            📱
+                                        </div>
+                                        <div>
+                                            <div class="text-xs font-bold text-slate-800">Add Android Forwarder</div>
+                                            <div class="text-[11px] text-slate-500">Generate bridge device token</div>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <!-- Create Invoice Button -->
+                                <button onclick="openModal('modal-add-invoice')" class="p-3.5 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/50 text-left transition group bg-white">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                                            🧾
+                                        </div>
+                                        <div>
+                                            <div class="text-xs font-bold text-slate-800">Create New Invoice</div>
+                                            <div class="text-[11px] text-slate-500">Test live checkout URL directly</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Tips Box -->
+                        <div class="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600 flex items-center justify-between">
+                            <span class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                Double-spending protection active via pessimistic database locking (<code>select_for_update()</code>).
+                            </span>
+                            <button onclick="switchTab('sandbox')" class="text-rose-600 font-semibold hover:underline text-[11px]">Open Sandbox →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions Feed Table -->
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-sm font-bold text-slate-900">Recent Checkout Invoices</h3>
+                            <span class="text-[10px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-full font-semibold">Live Feed</span>
+                        </div>
+                        <button onclick="switchTab('invoices')" class="text-xs text-rose-600 font-semibold hover:underline">View All Invoices →</button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="px-4 py-3">Order / Reference</th>
+                                    <th class="px-4 py-3">Merchant</th>
+                                    <th class="px-4 py-3">Amount</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3">TrxID</th>
+                                    <th class="px-4 py-3">Date</th>
+                                    <th class="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {% for inv in recent_invoices|slice:":8" %}
+                                <tr class="hover:bg-slate-50/80 transition" id="row-inv-{{ inv.id }}">
+                                    <td class="px-4 py-3">
+                                        <div class="font-bold text-slate-900">{{ inv.order_id }}</div>
+                                        <div class="text-[10px] text-slate-400 font-mono">{{ inv.reference_id }}</div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="font-medium text-slate-800">{{ inv.merchant.name }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 font-extrabold text-slate-900">
+                                        ৳ {{ inv.amount }}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        {% if inv.status == 'COMPLETED' %}
+                                        <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">PAID</span>
+                                        {% elif inv.status == 'PENDING' %}
+                                        <span class="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">PENDING</span>
+                                        {% elif inv.status == 'CANCELLED' %}
+                                        <span class="bg-slate-100 text-slate-600 border border-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full">CANCELLED</span>
+                                        {% else %}
+                                        <span class="bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded-full">EXPIRED</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 font-mono text-[11px] text-slate-600">
+                                        {{ inv.trx_id|default:"—" }}
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-400 text-[11px]">
+                                        {{ inv.created_at|date:"M d, H:i" }}
+                                    </td>
+                                    <td class="px-4 py-3 text-right space-x-1">
+                                        <a href="/checkout/{{ inv.reference_id }}/" target="_blank" class="text-rose-600 hover:text-rose-800 font-semibold px-2 py-1 rounded hover:bg-rose-50 transition text-[11px]">Checkout</a>
+                                        {% if inv.status == 'PENDING' %}
+                                        <button onclick="markInvoicePaid('{{ inv.id }}')" class="text-emerald-600 hover:text-emerald-800 font-semibold px-2 py-1 rounded hover:bg-emerald-50 transition text-[11px]">Mark Paid</button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="px-4 py-8 text-center text-slate-400">No invoices generated yet. Use the button above to create one.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ============================================================= -->
+            <!-- TAB 2: MERCHANTS & TENANTS (FULL CONTROL) -->
+            <!-- ============================================================= -->
+            <section id="tab-merchants" class="tab-content hidden space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Merchants &amp; Tenants Management</h2>
+                        <p class="text-xs text-slate-500">Configure tenant access, manage webhook listeners, and regenerate secure API credentials</p>
+                    </div>
+                    <button onclick="openModal('modal-add-merchant')" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 self-start sm:self-auto transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                        Add New Merchant
+                    </button>
+                </div>
+
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="px-4 py-3">Merchant / Business</th>
+                                    <th class="px-4 py-3">API Key (X-API-KEY)</th>
+                                    <th class="px-4 py-3">Webhook URL</th>
+                                    <th class="px-4 py-3">Return URL</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100" id="merchant-list-tbody">
+                                {% for m in merchants %}
+                                <tr class="hover:bg-slate-50/80 transition" id="row-merchant-{{ m.id }}">
+                                    <td class="px-4 py-3.5">
+                                        <div class="font-bold text-slate-900 text-sm">{{ m.name }}</div>
+                                        <div class="text-[11px] text-slate-400">{{ m.email|default:"No email specified" }}</div>
+                                    </td>
+                                    <td class="px-4 py-3.5">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-[11px]" id="key-text-{{ m.id }}">{{ m.api_key|truncatechars:18 }}</span>
+                                            <button onclick="copyToClipboard('{{ m.api_key }}', 'API Key copied!')" class="text-slate-400 hover:text-slate-700 p-1" title="Copy Full API Key">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3.5 font-mono text-[11px] text-slate-500 max-w-xs truncate">
+                                        {{ m.webhook_url|default:"Not Configured" }}
+                                    </td>
+                                    <td class="px-4 py-3.5 font-mono text-[11px] text-slate-500 max-w-xs truncate">
+                                        {{ m.return_url|default:"Not Configured" }}
+                                    </td>
+                                    <td class="px-4 py-3.5">
+                                        <button onclick="toggleMerchantStatus('{{ m.id }}')" id="status-badge-merchant-{{ m.id }}" class="{% if m.is_active %}bg-emerald-50 text-emerald-700 border-emerald-200{% else %}bg-slate-100 text-slate-600 border-slate-300{% endif %} border text-[10px] font-bold px-2 py-0.5 rounded-full transition hover:opacity-80">
+                                            {% if m.is_active %}ACTIVE{% else %}INACTIVE{% endif %}
+                                        </button>
+                                    </td>
+                                    <td class="px-4 py-3.5 text-right space-x-1.5 whitespace-nowrap">
+                                        <button onclick="regenerateMerchantKeys('{{ m.id }}')" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50 transition text-[11px]" title="Regenerate Credentials">
+                                            Regen Keys
+                                        </button>
+                                        <button onclick="deleteMerchant('{{ m.id }}', '{{ m.name|escapejs }}')" class="text-rose-600 hover:text-rose-800 font-semibold px-2 py-1 rounded hover:bg-rose-50 transition text-[11px]" title="Delete Merchant">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="px-4 py-8 text-center text-slate-400">No merchants added yet. Click 'Add New Merchant' to create one.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ============================================================= -->
+            <!-- TAB 3: INVOICES & CHECKOUTS (FULL CONTROL) -->
+            <!-- ============================================================= -->
+            <section id="tab-invoices" class="tab-content hidden space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Invoices &amp; Hosted Checkout Transactions</h2>
+                        <p class="text-xs text-slate-500">Monitor all payment invoices, check TrxID settlements, and launch checkout demos</p>
+                    </div>
+                    <div class="flex items-center gap-2 self-start sm:self-auto">
+                        <button onclick="openModal('modal-add-invoice')" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                            Create Invoice
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search & Filters -->
+                <div class="flex items-center gap-3">
+                    <div class="relative flex-1">
+                        <input type="text" id="invoice-search-input" onkeyup="filterInvoicesTable()" placeholder="Search invoices by Order ID, Reference, or TrxID..." class="w-full bg-white border border-slate-200 text-slate-800 text-xs rounded-xl pl-9 pr-4 py-2.5 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none shadow-sm">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700" id="invoices-full-table">
+                            <thead class="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="px-4 py-3">Order / Reference</th>
+                                    <th class="px-4 py-3">Merchant</th>
+                                    <th class="px-4 py-3">Customer Info</th>
+                                    <th class="px-4 py-3">Amount</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3">TrxID / Settled</th>
+                                    <th class="px-4 py-3">Created</th>
+                                    <th class="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {% for inv in recent_invoices %}
+                                <tr class="hover:bg-slate-50/80 transition invoice-row" id="row-inv-full-{{ inv.id }}">
+                                    <td class="px-4 py-3.5">
+                                        <div class="font-bold text-slate-900 text-xs inv-order-id">{{ inv.order_id }}</div>
+                                        <div class="text-[10px] text-slate-400 font-mono flex items-center gap-1 inv-ref-id">
+                                            {{ inv.reference_id }}
+                                            <button onclick="copyToClipboard('{{ inv.reference_id }}', 'Reference copied!')" class="text-slate-400 hover:text-slate-600">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3.5 font-medium text-slate-800">
+                                        {{ inv.merchant.name }}
+                                    </td>
+                                    <td class="px-4 py-3.5 text-slate-600">
+                                        <div>{{ inv.customer_name|default:"—" }}</div>
+                                        <div class="text-[10px] text-slate-400">{{ inv.customer_phone|default:"" }}</div>
+                                    </td>
+                                    <td class="px-4 py-3.5 font-extrabold text-slate-900 text-sm">
+                                        ৳ {{ inv.amount }}
+                                    </td>
+                                    <td class="px-4 py-3.5" id="inv-status-col-{{ inv.id }}">
+                                        {% if inv.status == 'COMPLETED' %}
+                                        <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">PAID</span>
+                                        {% elif inv.status == 'PENDING' %}
+                                        <span class="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">PENDING</span>
+                                        {% elif inv.status == 'CANCELLED' %}
+                                        <span class="bg-slate-100 text-slate-600 border border-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full">CANCELLED</span>
+                                        {% else %}
+                                        <span class="bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded-full">EXPIRED</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3.5 font-mono text-slate-700 text-xs inv-trx-id">
+                                        {{ inv.trx_id|default:"—" }}
+                                    </td>
+                                    <td class="px-4 py-3.5 text-slate-400 text-[11px]">
+                                        {{ inv.created_at|date:"M d, H:i" }}
+                                    </td>
+                                    <td class="px-4 py-3.5 text-right space-x-1.5 whitespace-nowrap">
+                                        <a href="/checkout/{{ inv.reference_id }}/" target="_blank" class="text-rose-600 hover:text-rose-800 font-semibold px-2 py-1 rounded hover:bg-rose-50 transition text-[11px]">Checkout</a>
+                                        {% if inv.status == 'PENDING' %}
+                                        <button onclick="markInvoicePaid('{{ inv.id }}')" class="text-emerald-600 hover:text-emerald-800 font-semibold px-2 py-1 rounded hover:bg-emerald-50 transition text-[11px]">Mark Paid</button>
+                                        <button onclick="cancelInvoice('{{ inv.id }}')" class="text-slate-500 hover:text-slate-700 font-semibold px-2 py-1 rounded hover:bg-slate-100 transition text-[11px]">Cancel</button>
+                                        {% endif %}
+                                        <button onclick="deleteInvoice('{{ inv.id }}')" class="text-rose-500 hover:text-rose-700 font-semibold px-2 py-1 rounded hover:bg-rose-50 transition text-[11px]">Delete</button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="px-4 py-8 text-center text-slate-400">No invoices found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ============================================================= -->
+            <!-- TAB 4: PAYMENT METHODS (FULL CONTROL) -->
+            <!-- ============================================================= -->
+            <section id="tab-payment-methods" class="tab-content hidden space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">MFS Payment Methods &amp; Receiving Numbers</h2>
+                        <p class="text-xs text-slate-500">Configure bKash, Nagad, Rocket, and Cellfin accounts assigned per merchant tenant</p>
+                    </div>
+                    <button onclick="openModal('modal-add-pm')" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 self-start sm:self-auto transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                        Add Payment Method
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="pm-cards-container">
+                    {% for pm in payment_methods %}
+                    <div class="glass-card rounded-2xl p-5 flex flex-col justify-between" id="pm-card-{{ pm.id }}">
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="{% if pm.provider == 'BKASH' %}bg-pink-50 text-pink-700 border-pink-200{% elif pm.provider == 'NAGAD' %}bg-amber-50 text-amber-700 border-amber-200{% elif pm.provider == 'ROCKET' %}bg-purple-50 text-purple-700 border-purple-200{% elif pm.provider == 'CELLFIN' %}bg-emerald-50 text-emerald-700 border-emerald-200{% else %}bg-slate-100 text-slate-700 border-slate-300{% endif %} border text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                                    {{ pm.get_provider_display }}
+                                </span>
+                                <button onclick="togglePaymentMethodStatus('{{ pm.id }}')" id="pm-status-badge-{{ pm.id }}" class="{% if pm.is_active %}bg-emerald-50 text-emerald-700 border-emerald-200{% else %}bg-slate-100 text-slate-600 border-slate-300{% endif %} border text-[10px] font-bold px-2 py-0.5 rounded-full transition">
+                                    {% if pm.is_active %}ACTIVE{% else %}DISABLED{% endif %}
+                                </button>
+                            </div>
+
+                            <div class="text-lg font-mono font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                                {{ pm.account_number }}
+                                <button onclick="copyToClipboard('{{ pm.account_number }}', 'Account number copied!')" class="text-slate-400 hover:text-slate-700">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                </button>
+                            </div>
+
+                            <div class="mt-2 text-xs text-slate-500 space-y-1">
+                                <div class="flex justify-between">
+                                    <span>Merchant:</span>
+                                    <span class="font-semibold text-slate-800">{{ pm.merchant.name }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Type:</span>
+                                    <span class="font-semibold text-slate-800">{{ pm.get_account_type_display }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Fee / Charge:</span>
+                                    <span class="font-semibold text-slate-800">{{ pm.charge_percentage }}%</span>
+                                </div>
+                            </div>
+
+                            {% if pm.instructions %}
+                            <div class="mt-3 p-2 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600">
+                                {{ pm.instructions|truncatechars:100 }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <span class="text-slate-400 text-[10px]">Order: #{{ pm.display_order }}</span>
+                            <div class="space-x-2">
+                                <button onclick="deletePaymentMethod('{{ pm.id }}')" class="text-rose-600 hover:text-rose-800 font-semibold text-[11px]">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-3 text-center py-12 glass-card rounded-2xl text-slate-400">
+                        No payment accounts configured yet. Click 'Add Payment Method' above.
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+
+            <!-- ============================================================= -->
+            <!-- TAB 5: ANDROID BRIDGE NODES (FULL CONTROL) -->
+            <!-- ============================================================= -->
+            <section id="tab-devices" class="tab-content hidden space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Android SMS Forwarder Bridge Nodes</h2>
+                        <p class="text-xs text-slate-500">Physical Android devices capturing incoming payment SMS and forwarding to API endpoint</p>
+                    </div>
+                    <button onclick="openModal('modal-add-device')" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 self-start sm:self-auto transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                        Add Bridge Device
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for d in devices %}
+                    <div class="glass-card rounded-2xl p-5 flex flex-col justify-between" id="device-card-{{ d.id }}">
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                                        📱
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-slate-900">{{ d.device_name }}</div>
+                                        <div class="text-[10px] text-slate-400">{{ d.sim_slot }} • {{ d.model_name|default:"Android Phone" }}</div>
+                                    </div>
+                                </div>
+                                <button onclick="toggleDeviceStatus('{{ d.id }}')" id="device-status-badge-{{ d.id }}" class="{% if d.is_active %}bg-emerald-50 text-emerald-700 border-emerald-200{% else %}bg-slate-100 text-slate-600 border-slate-300{% endif %} border text-[10px] font-bold px-2 py-0.5 rounded-full transition">
+                                    {% if d.is_active %}ACTIVE{% else %}INACTIVE{% endif %}
+                                </button>
+                            </div>
+
+                            <div class="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
+                                <div>
+                                    <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Device Auth Token (X-DEVICE-TOKEN)</div>
+                                    <div class="flex items-center justify-between mt-1">
+                                        <code class="text-xs font-mono text-slate-700" id="dev-token-{{ d.id }}">{{ d.device_token|truncatechars:18 }}</code>
+                                        <button onclick="copyToClipboard('{{ d.device_token }}', 'Device token copied!')" class="text-slate-400 hover:text-slate-700 p-0.5">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between pt-1 border-t border-slate-200 text-[11px] text-slate-500">
+                                    <span>Merchant:</span>
+                                    <span class="font-semibold text-slate-800">{{ d.merchant.name }}</span>
+                                </div>
+                                <div class="flex justify-between text-[11px] text-slate-500">
+                                    <span>Last Heartbeat:</span>
+                                    <span class="font-semibold text-slate-800">{{ d.last_synced_at|timesince|default:"Never" }} ago</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                            <button onclick="regenerateDeviceToken('{{ d.id }}')" class="text-blue-600 hover:text-blue-800 font-semibold text-[11px]">Regenerate Token</button>
+                            <button onclick="deleteDevice('{{ d.id }}')" class="text-rose-600 hover:text-rose-800 font-semibold text-[11px]">Remove</button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-3 text-center py-12 glass-card rounded-2xl text-slate-400">
+                        No Android devices registered yet. Click 'Add Bridge Device' above.
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+
+            <!-- ============================================================= -->
+            <!-- TAB 6: RAW SMS INGESTION LOGS -->
+            <!-- ============================================================= -->
+            <section id="tab-sms-logs" class="tab-content hidden space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Raw Android SMS Sync Logs</h2>
+                        <p class="text-xs text-slate-500">Incoming raw bank &amp; MFS text messages ingested via forwarder bridges</p>
+                    </div>
+                    <div class="flex items-center gap-2 self-start sm:self-auto">
+                        <button onclick="clearUnmatchedSMS()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 transition">
+                            Clear Unmatched Logs
+                        </button>
+                        <button onclick="openModal('modal-push-sms')" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                            Simulate Push SMS
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="px-4 py-3">Provider / Sender</th>
+                                    <th class="px-4 py-3">Parsed TrxID</th>
+                                    <th class="px-4 py-3">Amount</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3">Raw SMS Text</th>
+                                    <th class="px-4 py-3">Received At</th>
+                                    <th class="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {% for s in sms_logs %}
+                                <tr class="hover:bg-slate-50/80 transition" id="row-sms-{{ s.id }}">
+                                    <td class="px-4 py-3.5">
+                                        <div class="font-bold text-slate-900">{{ s.sender }}</div>
+                                        <div class="text-[10px] text-slate-400">{{ s.get_provider_display }}</div>
+                                    </td>
+                                    <td class="px-4 py-3.5 font-mono text-slate-800 font-bold">
+                                        {{ s.trx_id }}
+                                    </td>
+                                    <td class="px-4 py-3.5 font-extrabold text-slate-900">
+                                        ৳ {{ s.amount }}
+                                    </td>
+                                    <td class="px-4 py-3.5">
+                                        {% if s.status == 'MATCHED' %}
+                                        <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">MATCHED</span>
+                                        {% elif s.status == 'UNUSED' %}
+                                        <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">UNUSED</span>
+                                        {% else %}
+                                        <span class="bg-slate-100 text-slate-600 border border-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full">IGNORED</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3.5 font-mono text-[11px] text-slate-500 max-w-sm truncate" title="{{ s.raw_sms }}">
+                                        {{ s.raw_sms }}
+                                    </td>
+                                    <td class="px-4 py-3.5 text-slate-400 text-[11px]">
+                                        {{ s.received_at|date:"M d, H:i" }}
+                                    </td>
+                                    <td class="px-4 py-3.5 text-right">
+                                        <button onclick="deleteSMSLog('{{ s.id }}')" class="text-rose-500 hover:text-rose-700 font-semibold px-2 py-1 rounded hover:bg-rose-50 transition text-[11px]">Delete</button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="px-4 py-8 text-center text-slate-400">No SMS transactions recorded yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ============================================================= -->
+            <!-- TAB 7: API SANDBOX SIMULATOR (3-STEP INTERACTIVE) -->
+            <!-- ============================================================= -->
+            <section id="tab-sandbox" class="tab-content hidden space-y-6">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">API Sandbox Simulator</h2>
+                    <p class="text-xs text-slate-500">Test the entire end-to-end payment gateway workflow directly from the browser without Postman</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Step 1: Create Invoice -->
+                    <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-6 h-6 rounded-full bg-rose-100 text-rose-600 font-bold flex items-center justify-center text-xs">1</span>
+                                <h3 class="text-sm font-bold text-slate-900">Initiate Checkout</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-4">POST to <code>/api/v1/checkout/create/</code> with merchant API Key.</p>
+
+                            <div class="space-y-3 text-xs">
+                                <div>
+                                    <label class="block text-slate-600 font-medium mb-1">Select Merchant</label>
+                                    <select id="sbx-merchant" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                                        {% for m in merchants %}
+                                        <option value="{{ m.api_key }}" data-id="{{ m.id }}">{{ m.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 font-medium mb-1">Amount (BDT)</label>
+                                    <input type="number" id="sbx-amount" value="500.00" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 font-medium mb-1">Order ID</label>
+                                    <input type="text" id="sbx-order-id" value="TEST-{{ now_ts }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button onclick="runSandboxStep1()" id="sbx-step1-btn" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-xl shadow-sm transition">
+                                1. Create Invoice
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Push SMS Forwarder -->
+                    <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-600 font-bold flex items-center justify-center text-xs">2</span>
+                                <h3 class="text-sm font-bold text-slate-900">Android SMS Push</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-4">Simulate Android forwarder pushing payment SMS to <code>/api/v1/device/sync-sms/</code>.</p>
+
+                            <div class="space-y-3 text-xs">
+                                <div>
+                                    <label class="block text-slate-600 font-medium mb-1">Generated TrxID</label>
+                                    <input type="text" id="sbx-trx-id" value="TRX9K{{ now_ts|slice:'-5:' }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono font-bold outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 font-medium mb-1">Provider</label>
+                                    <select id="sbx-provider" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                                        <option value="BKASH">bKash (Send Money)</option>
+                                        <option value="NAGAD">Nagad</option>
+                                        <option value="ROCKET">Rocket</option>
+                                        <option value="CELLFIN">Cellfin</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 font-medium mb-1">Sender</label>
+                                    <input type="text" id="sbx-sender" value="bKash" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button onclick="runSandboxStep2()" id="sbx-step2-btn" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-xl shadow-sm transition">
+                                2. Sync SMS to Bridge
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Verify TrxID -->
+                    <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 font-bold flex items-center justify-center text-xs">3</span>
+                                <h3 class="text-sm font-bold text-slate-900">Verify TrxID</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-4">Customer enters TrxID to claim invoice with pessimistic locking.</p>
+
+                            <div class="space-y-3 text-xs">
+                                <div>
+                                    <label class="block text-slate-600 font-medium mb-1">Active Invoice Reference</label>
+                                    <input type="text" id="sbx-invoice-ref" placeholder="Generated from Step 1" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono outline-none" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 font-medium mb-1">Checkout Page Preview</label>
+                                    <a id="sbx-checkout-link" href="#" target="_blank" class="block text-rose-600 font-semibold hover:underline text-xs truncate">
+                                        Waiting for Step 1...
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button onclick="runSandboxStep3()" id="sbx-step3-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl shadow-sm transition">
+                                3. Atomically Verify Payment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Sandbox JSON Console -->
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-slate-900">Sandbox Execution Log</span>
+                        <button onclick="document.getElementById('sbx-console').textContent = 'Ready for test run.'" class="text-[11px] text-slate-400 hover:text-slate-700">Clear</button>
+                    </div>
+                    <pre id="sbx-console" class="bg-slate-900 text-emerald-400 p-4 rounded-xl font-mono text-xs overflow-x-auto max-h-60 custom-scrollbar">Ready for test run.</pre>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 3. INTERACTIVE MODALS FOR COMPLETE DIRECT CONTROL -->
+    <!-- ========================================================================= -->
+
+    <!-- Modal 1: Add Merchant -->
+    <div id="modal-add-merchant" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-900">Add New Merchant Tenant</h3>
+                <button onclick="closeModal('modal-add-merchant')" class="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+            <form onsubmit="submitCreateMerchant(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Merchant / Business Name *</label>
+                    <input type="text" id="m-name" required placeholder="e.g. Apex Digital Ltd" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Contact Email</label>
+                    <input type="email" id="m-email" placeholder="contact@example.com" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Webhook URL (Instant IPN)</label>
+                    <input type="url" id="m-webhook" placeholder="https://merchant.com/api/payment-webhook" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Return / Success Redirect URL</label>
+                    <input type="url" id="m-return" placeholder="https://merchant.com/order-success" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                </div>
+                <div class="flex items-center gap-2 pt-2">
+                    <input type="checkbox" id="m-active" checked class="w-4 h-4 text-rose-600 rounded">
+                    <label for="m-active" class="font-medium text-slate-700">Account is Active</label>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('modal-add-merchant')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-sm">Save Merchant</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Add Payment Method -->
+    <div id="modal-add-pm" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-900">Add MFS Payment Number</h3>
+                <button onclick="closeModal('modal-add-pm')" class="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+            <form onsubmit="submitCreatePaymentMethod(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Select Merchant *</label>
+                    <select id="pm-merchant" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                        {% for m in merchants %}
+                        <option value="{{ m.id }}">{{ m.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Provider *</label>
+                        <select id="pm-provider" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                            <option value="BKASH">bKash</option>
+                            <option value="NAGAD">Nagad</option>
+                            <option value="ROCKET">Rocket</option>
+                            <option value="CELLFIN">Cellfin</option>
+                            <option value="UPAY">Upay</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Account Type *</label>
+                        <select id="pm-type" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                            <option value="PERSONAL">Personal (Send Money)</option>
+                            <option value="MERCHANT">Merchant (Make Payment)</option>
+                            <option value="AGENT">Agent (Cash Out)</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Receiving Phone / Wallet Number *</label>
+                    <input type="text" id="pm-number" required placeholder="017XXXXXXXX" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-mono outline-none focus:bg-white focus:border-rose-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Payment Instructions</label>
+                    <textarea id="pm-instructions" rows="2" placeholder="Send Money to this personal number and enter TrxID below." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 outline-none focus:bg-white focus:border-rose-500"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Fee Percentage (%)</label>
+                        <input type="number" step="0.01" id="pm-charge" value="0.00" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Display Order</label>
+                        <input type="number" id="pm-order" value="1" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('modal-add-pm')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-sm">Add Number</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Add Device -->
+    <div id="modal-add-device" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-900">Add Android Forwarder Bridge</h3>
+                <button onclick="closeModal('modal-add-device')" class="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+            <form onsubmit="submitCreateDevice(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Select Merchant *</label>
+                    <select id="dev-merchant" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                        {% for m in merchants %}
+                        <option value="{{ m.id }}">{{ m.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Device Name / Nickname *</label>
+                    <input type="text" id="dev-name" required placeholder="e.g. Gateway Android Bridge 1" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Hardware Model</label>
+                        <input type="text" id="dev-model" placeholder="Samsung Galaxy A14" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">SIM Slot</label>
+                        <input type="text" id="dev-sim" value="SIM 1" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('modal-add-device')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-sm">Register Device</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 4: Create Invoice -->
+    <div id="modal-add-invoice" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-900">Create New Invoice</h3>
+                <button onclick="closeModal('modal-add-invoice')" class="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+            <form onsubmit="submitCreateInvoice(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Merchant *</label>
+                    <select id="inv-merchant" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none focus:bg-white focus:border-rose-500">
+                        {% for m in merchants %}
+                        <option value="{{ m.id }}">{{ m.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Amount (BDT) *</label>
+                        <input type="number" step="0.01" id="inv-amount" required placeholder="500.00" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-mono outline-none focus:bg-white focus:border-rose-500">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Order ID</label>
+                        <input type="text" id="inv-order" placeholder="Auto-generated" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-mono outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Customer Name</label>
+                    <input type="text" id="inv-cust-name" placeholder="John Doe" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Customer Phone</label>
+                        <input type="text" id="inv-cust-phone" placeholder="017XXXXXXXX" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Customer Email</label>
+                        <input type="email" id="inv-cust-email" placeholder="customer@mail.com" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('modal-add-invoice')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-sm">Generate Checkout</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 5: Push SMS Simulation -->
+    <div id="modal-push-sms" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-900">Simulate Push SMS via Forwarder</h3>
+                <button onclick="closeModal('modal-push-sms')" class="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+            <form onsubmit="submitPushSMS(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Device Token (Bridge) *</label>
+                    <select id="sim-dev-token" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 outline-none">
+                        {% for d in devices %}
+                        <option value="{{ d.device_token }}">{{ d.device_name }} ({{ d.merchant.name }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Amount *</label>
+                        <input type="number" step="0.01" id="sim-amount" value="500.00" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 font-mono outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">TrxID *</label>
+                        <input type="text" id="sim-trx" value="TRX9K{{ now_ts|slice:'-5:' }}" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 font-mono font-bold outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Sender</label>
+                    <input type="text" id="sim-sender" value="bKash" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 outline-none">
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('modal-push-sms')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-sm">Sync SMS</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 4. CORE CONTROLLER SCRIPTS -->
+    <!-- ========================================================================= -->
+    <script>
+        // --- 1. Notification Toast ---
+        function showToast(msg, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.innerText = msg;
+            toastIcon.className = `w-2.5 h-2.5 rounded-full ${isSuccess ? 'bg-emerald-500' : 'bg-rose-500'}`;
+
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 3000);
+        }
+
+        // --- 2. Copy Helper ---
+        function copyToClipboard(text, msg = 'Copied to clipboard!') {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(msg);
+            }).catch(() => {
+                showToast('Failed to copy', false);
+            });
+        }
+
+        // --- 3. Sidebar & Tab Controller ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        const tabTitles = {
+            'overview': 'Dashboard Overview',
+            'merchants': 'Merchants & Tenants Management',
+            'invoices': 'Invoices & Hosted Checkouts',
+            'payment-methods': 'MFS Payment Methods',
+            'devices': 'Android SMS Bridge Nodes',
+            'sms-logs': 'Raw Ingested SMS Logs',
+            'sandbox': 'Interactive API Sandbox'
+        };
+
+        const tabActionLabels = {
+            'overview': 'Create Invoice',
+            'merchants': 'Add Merchant',
+            'invoices': 'Create Invoice',
+            'payment-methods': 'Add Number',
+            'devices': 'Add Device',
+            'sms-logs': 'Simulate SMS',
+            'sandbox': 'Run Step 1'
+        };
+
+        function switchTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            // Remove active style from sidebar
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+
+            // Show selected tab content
+            const target = document.getElementById('tab-' + tabId);
+            if (target) target.classList.remove('hidden');
+
+            // Highlight nav button
+            const navBtn = document.getElementById('nav-' + tabId);
+            if (navBtn) navBtn.classList.add('active');
+
+            // Update title & header button label
+            document.getElementById('page-title').innerText = tabTitles[tabId] || 'Dashboard';
+            document.getElementById('header-action-label').innerText = tabActionLabels[tabId] || 'New Action';
+
+            // Close mobile sidebar if open
+            if (window.innerWidth < 1024) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function openCreateModal() {
+            const activeNav = document.querySelector('.sidebar-item.active');
+            const navId = activeNav ? activeNav.id : 'nav-overview';
+
+            if (navId === 'nav-merchants') openModal('modal-add-merchant');
+            else if (navId === 'nav-payment-methods') openModal('modal-add-pm');
+            else if (navId === 'nav-devices') openModal('modal-add-device');
+            else if (navId === 'nav-sms-logs') openModal('modal-push-sms');
+            else if (navId === 'nav-sandbox') runSandboxStep1();
+            else openModal('modal-add-invoice');
+        }
+
+        // --- 4. Modal Helpers ---
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // --- 5. Unified Backend Action Caller ---
+        async function callAdminAction(payload) {
+            try {
+                const resp = await fetch('/api/v1/admin/action/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                return await resp.json();
+            } catch (err) {
+                return { status: 'error', message: err.message };
+            }
+        }
+
+        // --- 6. Merchant Management Handlers ---
+        async function submitCreateMerchant(e) {
+            e.preventDefault();
+            const payload = {
+                action: 'create_merchant',
+                name: document.getElementById('m-name').value,
+                email: document.getElementById('m-email').value,
+                webhook_url: document.getElementById('m-webhook').value,
+                return_url: document.getElementById('m-return').value,
+                is_active: document.getElementById('m-active').checked
+            };
+            const res = await callAdminAction(payload);
+            if (res.status === 'success') {
+                showToast(res.message);
+                closeModal('modal-add-merchant');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message || 'Error creating merchant', false);
+            }
+        }
+
+        async function toggleMerchantStatus(id) {
+            const res = await callAdminAction({ action: 'toggle_merchant', id });
+            if (res.status === 'success') {
+                const badge = document.getElementById('status-badge-merchant-' + id);
+                if (badge) {
+                    badge.innerText = res.is_active ? 'ACTIVE' : 'INACTIVE';
+                    badge.className = (res.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-300') + ' border text-[10px] font-bold px-2 py-0.5 rounded-full transition';
+                }
+                showToast(res.message);
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        async function regenerateMerchantKeys(id) {
+            if (!confirm('Are you sure you want to regenerate API keys? Old keys will immediately stop working.')) return;
+            const res = await callAdminAction({ action: 'regenerate_merchant_keys', id });
+            if (res.status === 'success') {
+                showToast('New API credentials generated!');
+                copyToClipboard(res.api_key, 'New API Key copied to clipboard!');
+                const el = document.getElementById('key-text-' + id);
+                if (el) el.innerText = res.api_key.substring(0, 18) + '...';
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        async function deleteMerchant(id, name) {
+            if (!confirm(`Are you sure you want to delete merchant "${name}" and all their invoices?`)) return;
+            const res = await callAdminAction({ action: 'delete_merchant', id });
+            if (res.status === 'success') {
+                showToast(res.message);
+                const row = document.getElementById('row-merchant-' + id);
+                if (row) row.remove();
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        // --- 7. Payment Method Handlers ---
+        async function submitCreatePaymentMethod(e) {
+            e.preventDefault();
+            const payload = {
+                action: 'create_payment_method',
+                merchant_id: document.getElementById('pm-merchant').value,
+                provider: document.getElementById('pm-provider').value,
+                account_type: document.getElementById('pm-type').value,
+                account_number: document.getElementById('pm-number').value,
+                instructions: document.getElementById('pm-instructions').value,
+                charge_percentage: document.getElementById('pm-charge').value,
+                display_order: document.getElementById('pm-order').value
+            };
+            const res = await callAdminAction(payload);
+            if (res.status === 'success') {
+                showToast(res.message);
+                closeModal('modal-add-pm');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message || 'Error adding number', false);
+            }
+        }
+
+        async function togglePaymentMethodStatus(id) {
+            const res = await callAdminAction({ action: 'toggle_payment_method', id });
+            if (res.status === 'success') {
+                const badge = document.getElementById('pm-status-badge-' + id);
+                if (badge) {
+                    badge.innerText = res.is_active ? 'ACTIVE' : 'DISABLED';
+                    badge.className = (res.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-300') + ' border text-[10px] font-bold px-2 py-0.5 rounded-full transition';
+                }
+                showToast(res.message);
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        async function deletePaymentMethod(id) {
+            if (!confirm('Remove this payment method?')) return;
+            const res = await callAdminAction({ action: 'delete_payment_method', id });
+            if (res.status === 'success') {
+                showToast(res.message);
+                const card = document.getElementById('pm-card-' + id);
+                if (card) card.remove();
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        // --- 8. Device Handlers ---
+        async function submitCreateDevice(e) {
+            e.preventDefault();
+            const payload = {
+                action: 'create_device',
+                merchant_id: document.getElementById('dev-merchant').value,
+                device_name: document.getElementById('dev-name').value,
+                model_name: document.getElementById('dev-model').value,
+                sim_slot: document.getElementById('dev-sim').value
+            };
+            const res = await callAdminAction(payload);
+            if (res.status === 'success') {
+                showToast(res.message);
+                closeModal('modal-add-device');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message || 'Error registering device', false);
+            }
+        }
+
+        async function regenerateDeviceToken(id) {
+            if (!confirm('Regenerate device auth token? The Android phone app will need this new token.')) return;
+            const res = await callAdminAction({ action: 'regenerate_device_token', id });
+            if (res.status === 'success') {
+                showToast('Token regenerated!');
+                copyToClipboard(res.device_token, 'New Device Token copied!');
+                const el = document.getElementById('dev-token-' + id);
+                if (el) el.innerText = res.device_token.substring(0, 18) + '...';
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        async function toggleDeviceStatus(id) {
+            const res = await callAdminAction({ action: 'toggle_device', id });
+            if (res.status === 'success') {
+                const badge = document.getElementById('device-status-badge-' + id);
+                if (badge) {
+                    badge.innerText = res.is_active ? 'ACTIVE' : 'INACTIVE';
+                    badge.className = (res.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-300') + ' border text-[10px] font-bold px-2 py-0.5 rounded-full transition';
+                }
+                showToast(res.message);
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        async function deleteDevice(id) {
+            if (!confirm('Remove this device bridge?')) return;
+            const res = await callAdminAction({ action: 'delete_device', id });
+            if (res.status === 'success') {
+                showToast(res.message);
+                const card = document.getElementById('device-card-{{ d.id }}');
+                if (card) card.remove();
+                setTimeout(() => location.reload(), 600);
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        // --- 9. Invoice Handlers ---
+        async function submitCreateInvoice(e) {
+            e.preventDefault();
+            const payload = {
+                action: 'create_invoice',
+                merchant_id: document.getElementById('inv-merchant').value,
+                amount: document.getElementById('inv-amount').value,
+                order_id: document.getElementById('inv-order').value,
+                customer_name: document.getElementById('inv-cust-name').value,
+                customer_phone: document.getElementById('inv-cust-phone').value,
+                customer_email: document.getElementById('inv-cust-email').value
+            };
+            const res = await callAdminAction(payload);
+            if (res.status === 'success') {
+                showToast('Invoice created successfully!');
+                closeModal('modal-add-invoice');
+                window.open(res.checkout_url, '_blank');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res.message || 'Error generating invoice', false);
+            }
+        }
+
+        async function markInvoicePaid(id) {
+            const trx = prompt('Enter payment TrxID (leave blank to auto-generate):', 'MANUAL-' + Date.now().toString().slice(-6));
+            if (trx === null) return;
+            const res = await callAdminAction({ action: 'mark_invoice_paid', id, trx_id: trx });
+            if (res.status === 'success') {
+                showToast(res.message);
+                setTimeout(() => location.reload(), 600);
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        async function cancelInvoice(id) {
+            if (!confirm('Cancel this invoice?')) return;
+            const res = await callAdminAction({ action: 'cancel_invoice', id });
+            if (res.status === 'success') {
+                showToast(res.message);
+                setTimeout(() => location.reload(), 600);
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        async function deleteInvoice(id) {
+            if (!confirm('Permanently delete this invoice?')) return;
+            const res = await callAdminAction({ action: 'delete_invoice', id });
+            if (res.status === 'success') {
+                showToast(res.message);
+                const row = document.getElementById('row-inv-full-' + id);
+                if (row) row.remove();
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        function filterInvoicesTable() {
+            const query = document.getElementById('invoice-search-input').value.toLowerCase();
+            document.querySelectorAll('#invoices-full-table .invoice-row').forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        // --- 10. SMS Ingest Handlers ---
+        async function submitPushSMS(e) {
+            e.preventDefault();
+            const devToken = document.getElementById('sim-dev-token').value;
+            const payload = {
+                raw_items: [{
+                    sender: document.getElementById('sim-sender').value,
+                    trx_id: document.getElementById('sim-trx').value,
+                    amount: document.getElementById('sim-amount').value,
+                    raw_sms: `Received Tk ${document.getElementById('sim-amount').value} from 01700000000. TrxID ${document.getElementById('sim-trx').value}`
+                }]
+            };
+            try {
+                const resp = await fetch('/api/v1/device/sync-sms/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-DEVICE-TOKEN': devToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const res = await resp.json();
+                if (resp.ok && res.status === 'success') {
+                    showToast(`SMS synced! ${res.synced_count} recorded.`);
+                    closeModal('modal-push-sms');
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showToast(res.message || 'SMS sync error', false);
+                }
+            } catch (err) {
+                showToast(err.message, false);
+            }
+        }
+
+        async function deleteSMSLog(id) {
+            if (!confirm('Delete this SMS record?')) return;
+            const res = await callAdminAction({ action: 'delete_sms', id });
+            if (res.status === 'success') {
+                showToast(res.message);
+                const row = document.getElementById('row-sms-' + id);
+                if (row) row.remove();
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        async function clearUnmatchedSMS() {
+            if (!confirm('Delete all UNUSED SMS logs?')) return;
+            const res = await callAdminAction({ action: 'clear_unmatched_sms' });
+            if (res.status === 'success') {
+                showToast(res.message);
+                setTimeout(() => location.reload(), 600);
+            } else {
+                showToast(res.message, false);
+            }
+        }
+
+        // --- 11. API Sandbox Simulator Handlers ---
+        let currentSbxRefId = null;
+
+        async function runSandboxStep1() {
+            const consoleEl = document.getElementById('sbx-console');
+            consoleEl.textContent = 'Executing Step 1: Creating Checkout Invoice...';
+
+            const apiKey = document.getElementById('sbx-merchant').value;
+            const amount = document.getElementById('sbx-amount').value;
+            const orderId = document.getElementById('sbx-order-id').value;
+
+            try {
+                const resp = await fetch('/api/v1/checkout/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-KEY': apiKey
+                    },
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        amount: amount,
+                        customer_name: 'Sandbox Tester',
+                        customer_phone: '01700000000'
+                    })
+                });
+                const res = await resp.json();
+                consoleEl.textContent = 'STEP 1 RESPONSE:\n' + JSON.stringify(res, null, 2);
+
+                if (resp.ok && res.status === 'success') {
+                    currentSbxRefId = res.invoice_id || res.reference_id;
+                    document.getElementById('sbx-invoice-ref').value = currentSbxRefId;
+                    const checkoutLink = document.getElementById('sbx-checkout-link');
+                    checkoutLink.href = res.checkout_url;
+                    checkoutLink.innerText = 'Launch Hosted Checkout (' + orderId + ') ↗';
+                    showToast('Step 1 complete: Invoice ready!');
+                } else {
+                    showToast('Step 1 Failed: ' + (res.detail || 'Error'), false);
+                }
+            } catch (err) {
+                consoleEl.textContent = 'STEP 1 ERROR:\n' + err.message;
+            }
+        }
+
+        async function runSandboxStep2() {
+            const consoleEl = document.getElementById('sbx-console');
+            consoleEl.textContent = 'Executing Step 2: Ingesting Android SMS...';
+
+            const devSelect = document.getElementById('sim-dev-token');
+            const devToken = devSelect ? devSelect.value : '';
+            if (!devToken) {
+                showToast('Please add an Android Bridge device first.', false);
+                return;
+            }
+
+            const trxId = document.getElementById('sbx-trx-id').value;
+            const amount = document.getElementById('sbx-amount').value;
+            const sender = document.getElementById('sbx-sender').value;
+
+            try {
+                const resp = await fetch('/api/v1/device/sync-sms/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-DEVICE-TOKEN': devToken
+                    },
+                    body: JSON.stringify({
+                        raw_items: [{
+                            sender: sender,
+                            trx_id: trxId,
+                            amount: amount,
+                            raw_sms: `Received Tk ${amount} from 01700000000. TrxID ${trxId}`
+                        }]
+                    })
+                });
+                const res = await resp.json();
+                consoleEl.textContent = 'STEP 2 RESPONSE:\n' + JSON.stringify(res, null, 2);
+
+                if (resp.ok && res.status === 'success') {
+                    showToast('Step 2 complete: SMS Synced!');
+                } else {
+                    showToast('Step 2 Failed: ' + (res.message || 'Error'), false);
+                }
+            } catch (err) {
+                consoleEl.textContent = 'STEP 2 ERROR:\n' + err.message;
+            }
+        }
+
+        async function runSandboxStep3() {
+            const consoleEl = document.getElementById('sbx-console');
+            const refId = document.getElementById('sbx-invoice-ref').value;
+            const trxId = document.getElementById('sbx-trx-id').value;
+
+            if (!refId) {
+                showToast('Please run Step 1 to generate an invoice first.', false);
+                return;
+            }
+
+            consoleEl.textContent = 'Executing Step 3: Atomic TrxID Verification...';
+
+            try {
+                const resp = await fetch(`/api/v1/checkout/${refId}/verify/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ trx_id: trxId })
+                });
+                const res = await resp.json();
+                consoleEl.textContent = 'STEP 3 RESPONSE:\n' + JSON.stringify(res, null, 2);
+
+                if (resp.ok && res.status === 'success') {
+                    showToast('🎉 Step 3 SUCCESS: Payment Verified & Settled!');
+                } else {
+                    showToast('Step 3 Verification: ' + (res.message || res.detail || 'Not Matched'), false);
+                }
+            } catch (err) {
+                consoleEl.textContent = 'STEP 3 ERROR:\n' + err.message;
+            }
+        }
+
+        // --- 12. Chart.js Initialization (Clean White Theme) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const ctx = document.getElementById('providerChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['bKash', 'Nagad', 'Rocket', 'Cellfin'],
+                        datasets: [{
+                            data: [{{ bkash_count }}, {{ nagad_count }}, {{ rocket_count }}, {{ cellfin_count }}],
+                            backgroundColor: ['#E2136E', '#F7941D', '#8C3494', '#00693E'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: '#1e293b',
+                                titleColor: '#ffffff',
+                                bodyColor: '#cbd5e1',
+                                padding: 10,
+                                cornerRadius: 8
+                            }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

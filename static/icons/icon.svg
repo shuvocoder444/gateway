@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+    <defs>
+        <linearGradient id="grad-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0f172a"/>
+            <stop offset="100%" stop-color="#020617"/>
+        </linearGradient>
+        <linearGradient id="grad-shield" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#e2136e"/>
+            <stop offset="50%" stop-color="#f7941d"/>
+            <stop offset="100%" stop-color="#8c3494"/>
+        </linearGradient>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="16" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+    </defs>
+    <rect width="512" height="512" rx="110" fill="url(#grad-bg)"/>
+    <rect x="16" y="16" width="480" height="480" rx="98" fill="none" stroke="#e2136e" stroke-opacity="0.3" stroke-width="4"/>
+    
+    <!-- Outer Shield -->
+    <path d="M256 90 L380 155 C380 280 256 395 256 422 C256 395 132 280 132 155 Z" fill="url(#grad-shield)" filter="url(#glow)"/>
+    
+    <!-- Inner Emblem -->
+    <circle cx="256" cy="245" r="58" fill="#ffffff" />
+    <path d="M246 215 L266 215 M256 215 L256 275 M244 245 L268 245" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
+</svg>
