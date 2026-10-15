@@ -713,3 +713,36 @@ def admin_action_api(request):
 
     return JsonResponse({'status': 'error', 'message': f'Unknown action: {action}'}, status=400)
 
+
+# =====================================================================
+# SMS FORWARDER APP DOWNLOAD VIEWS
+# =====================================================================
+import os
+from django.conf import settings
+from django.http import FileResponse, Http404
+
+def download_sms_forwarder_apk(request):
+    """Serve the SMS Forwarder Android APK directly for instant install."""
+    apk_path = settings.BASE_DIR / 'static' / 'downloads' / 'sms-forwarder.apk'
+    if not os.path.exists(apk_path):
+        raise Http404("SMS Forwarder APK not found.")
+    return FileResponse(
+        open(apk_path, 'rb'),
+        content_type='application/vnd.android.package-archive',
+        as_attachment=True,
+        filename='SMS_Forwarder.apk'
+    )
+
+
+def download_sms_forwarder_source(request):
+    """Serve the complete Android Studio source code as a ZIP archive."""
+    zip_path = settings.BASE_DIR / 'static' / 'downloads' / 'mfs-forwarder-source.zip'
+    if not os.path.exists(zip_path):
+        raise Http404("Source package not found.")
+    return FileResponse(
+        open(zip_path, 'rb'),
+        content_type='application/zip',
+        as_attachment=True,
+        filename='mfs-sms-forwarder-source.zip'
+    )
+

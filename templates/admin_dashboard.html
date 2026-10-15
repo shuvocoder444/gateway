@@ -720,10 +720,43 @@
                         <h2 class="text-base font-bold text-slate-900">Android SMS Forwarder Bridge Nodes</h2>
                         <p class="text-xs text-slate-500">Physical Android devices capturing incoming payment SMS and forwarding to API endpoint</p>
                     </div>
-                    <button onclick="openModal('modal-add-device')" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 self-start sm:self-auto transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
-                        Add Bridge Device
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <a href="/download/sms-forwarder/" download class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download APK (.apk)
+                        </a>
+                        <button onclick="openModal('modal-add-device')" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 self-start sm:self-auto transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                            Add Bridge Device
+                        </button>
+                    </div>
+                </div>
+
+                <!-- App Download & Setup Banner -->
+                <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shrink-0 shadow-sm">
+                            📱
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-slate-900">SMS Forwarder Android App (.apk)</span>
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">v1.77 Ready</span>
+                            </div>
+                            <p class="text-[11px] text-slate-600 mt-0.5">
+                                Install on any Android phone containing your MFS SIMs (bKash, Nagad, Rocket). Messages sync via <code class="font-mono bg-white px-1 py-0.5 rounded border text-[10px] text-rose-600">/api/v1/device/sync-sms/</code> using each phone's Device Auth Token.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="/download/sms-forwarder/" download class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download APK
+                        </a>
+                        <a href="/download/sms-forwarder-source/" download class="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-300 transition">
+                            Source Code (.zip)
+                        </a>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

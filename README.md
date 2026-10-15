@@ -296,3 +296,9 @@ OK
 3. **PWA অ্যাপ হিসেবে ব্যবহার:**  
    ব্রাউজারে [http://127.0.0.1:8000/dashboard/](http://127.0.0.1:8000/dashboard/) ওপেন করলে ব্রাউজার বারে "Install App" বাটন পাবেন। ক্লিক করলে এটি পিসিতে বা ফোনে আলাদা সফটওয়্যার অ্যাপের মতো ইনস্টল হয়ে যাবে।
 # gateway
+
+## Android Forwarder App (Project Setup)
+
+The Android source project is in `android-sms-forwarder/`. Open that folder in Android Studio (JDK 17 and Android SDK 35), let Gradle sync, then select **Build > Build APK(s)**. Install `app/build/outputs/apk/debug/app-debug.apk` on the payment phone and grant SMS permission. In the app, enter the gateway HTTPS base URL and the device token generated from Admin Dashboard, save settings, then use **Send test heartbeat**. Keep the SIM active and allow background activity/battery use.
+
+The app only queues incoming messages that contain receipt-like wording, an amount, and a TrxID; it forwards those fields to `/api/v1/device/sync-sms/` and retries queued messages when connectivity returns. A prebuilt APK or Play Store release is not included. SMS parsing is not equivalent to a provider-side payment confirmation; use an official provider API/webhook for production-grade verification.

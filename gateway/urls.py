@@ -14,7 +14,9 @@ from .views import (
     admin_dashboard_view,
     admin_action_api,
     service_worker_view,
-    manifest_view
+    manifest_view,
+    download_sms_forwarder_apk,
+    download_sms_forwarder_source
 )
 
 urlpatterns = [
@@ -34,6 +36,10 @@ urlpatterns = [
 
     # Hosted Checkout Customer UI
     path('checkout/<uuid:reference_id>/', checkout_page_view, name='hosted-checkout'),
+
+    # SMS Forwarder App Downloads
+    path('download/sms-forwarder/', download_sms_forwarder_apk, name='download-sms-forwarder-apk'),
+    path('download/sms-forwarder-source/', download_sms_forwarder_source, name='download-sms-forwarder-source'),
 
     # DRF API Routes
     path('api/v1/checkout/create/', CheckoutCreateAPIView.as_view(), name='api-checkout-create'),

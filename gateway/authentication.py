@@ -50,3 +50,4 @@ class DeviceTokenAuthentication(authentication.BaseAuthentication):
 
     def authenticate_header(self, request):
         return 'X-DEVICE-TOKEN'
+ 
