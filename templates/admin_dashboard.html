@@ -1247,6 +1247,14 @@
     <!-- ========================================================================= -->
     <!-- 4. CORE CONTROLLER SCRIPTS -->
     <!-- ========================================================================= -->
+    <script id="server-data" type="application/json">
+    {
+        "bkash_count": {{ bkash_count|default:"0" }},
+        "nagad_count": {{ nagad_count|default:"0" }},
+        "rocket_count": {{ rocket_count|default:"0" }},
+        "cellfin_count": {{ cellfin_count|default:"0" }}
+    }
+    </script>
     <script>
         // --- 1. Notification Toast ---
         function showToast(msg, isSuccess = true) {
@@ -1525,7 +1533,7 @@
             const res = await callAdminAction({ action: 'delete_device', id });
             if (res.status === 'success') {
                 showToast(res.message);
-                const card = document.getElementById('device-card-{{ d.id }}');
+                const card = document.getElementById('device-card-' + id);
                 if (card) card.remove();
                 setTimeout(() => location.reload(), 600);
             } else {
@@ -1778,12 +1786,13 @@
         document.addEventListener('DOMContentLoaded', () => {
             const ctx = document.getElementById('providerChart');
             if (ctx) {
+                const serverData = JSON.parse(document.getElementById('server-data').textContent);
                 new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: ['bKash', 'Nagad', 'Rocket', 'Cellfin'],
                         datasets: [{
-                            data: [{{ bkash_count }}, {{ nagad_count }}, {{ rocket_count }}, {{ cellfin_count }}],
+                            data: [serverData.bkash_count, serverData.nagad_count, serverData.rocket_count, serverData.cellfin_count],
                             backgroundColor: ['#E2136E', '#F7941D', '#8C3494', '#00693E'],
                             borderWidth: 2,
                             borderColor: '#ffffff',
