@@ -79,6 +79,11 @@ def deploy():
         if code:
             raise RuntimeError("Remote extraction failed; deployment stopped.")
 
+        print("\n[*] Installing project dependencies...")
+        code, _, _ = run_cmd(ssh, f"cd {REMOTE_BASE} && {PIP_BIN} install -r requirements.txt")
+        if code:
+            raise RuntimeError("Dependency installation failed; deployment stopped.")
+
         print("\n[*] Ensuring permissions on sqlite database...")
         run_cmd(ssh, f"chmod 664 {REMOTE_BASE}/db.sqlite3 2>/dev/null || true")
 
@@ -93,7 +98,9 @@ def deploy():
             raise RuntimeError("Static file collection failed; deployment stopped.")
 
         print("\n[*] Restarting Phusion Passenger...")
-        run_cmd(ssh, f"mkdir -p {REMOTE_BASE}/tmp && touch {REMOTE_BASE}/tmp/restart.txt")
+        code, _, _ = run_cmd(ssh, f"mkdir -p {REMOTE_BASE}/tmp && touch {REMOTE_BASE}/tmp/restart.txt")
+        if code:
+            raise RuntimeError("Passenger restart signal failed.")
         print("[+] Touched tmp/restart.txt!")
 
     finally:
@@ -105,14 +112,23 @@ def deploy():
     urls = [
         "https://payment.webkoders.com/admin-dashboard/",
         "https://payment.webkoders.com/dashboard/",
-        "https://payment.webkoders.com/api/devices/",
+        "https://payment.webkoders.com/api/v1/device/sync-sms/",
+        "https://payment.webkoders.com/download/sms-forwarder/",
+        "https://payment.webkoders.com/download/sms-forwarder-source/",
     ]
+    verification_issues = []
     for url in urls:
         try:
-            r = requests.get(url, timeout=15)
+            r = requests.get(url, timeout=15, allow_redirects=False)
             print(f"  [HTTP {r.status_code}] {url}")
+            if r.status_code >= 500:
+                verification_issues.append(f"HTTP {r.status_code}: {url}")
         except Exception as e:
             print(f"  [ERR] {url} -> {e}")
+            verification_issues.append(f"{url}: {e}")
+
+    if verification_issues:
+        print("[!] Deployment completed, but one or more endpoint checks need another look.")
 
     print("\n" + "=" * 60)
     print("  Deployment Finished!")
