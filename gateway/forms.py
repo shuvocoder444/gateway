@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.core.exceptions import ValidationError
 
 
 User = get_user_model()
@@ -79,3 +80,40 @@ class MerchantRegistrationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class PaymentQRCodeUploadForm(forms.Form):
+    qr_code = forms.ImageField()
+
+    def clean_qr_code(self):
+        image = self.cleaned_data['qr_code']
+        if image.size > 5 * 1024 * 1024:
+            raise ValidationError('QR image must be 5 MB or smaller.')
+        if getattr(image.image, 'format', '') not in {'PNG', 'JPEG', 'WEBP'}:
+            raise ValidationError('Upload a PNG, JPG, or WebP QR image.')
+        width, height = image.image.size
+        if width > 5000 or height > 5000:
+            raise ValidationError('QR image dimensions must be 5000 × 5000 pixels or less.')
+        return image
+
+
+class MerchantBrandingForm(forms.Form):
+    checkout_display_name = forms.CharField(max_length=255, required=False)
+    logo = forms.ImageField(required=False)
+    checkout_copyright = forms.CharField(max_length=180, required=False)
+    support_email = forms.EmailField(required=False)
+    support_phone = forms.CharField(max_length=32, required=False)
+    clear_logo = forms.BooleanField(required=False)
+
+    def clean_logo(self):
+        image = self.cleaned_data.get('logo')
+        if image is None:
+            return image
+        if image.size > 5 * 1024 * 1024:
+            raise ValidationError('Logo must be 5 MB or smaller.')
+        if getattr(image.image, 'format', '') not in {'PNG', 'JPEG', 'WEBP'}:
+            raise ValidationError('Upload a PNG, JPG, or WebP logo.')
+        width, height = image.image.size
+        if width > 3000 or height > 3000:
+            raise ValidationError('Logo dimensions must be 3000 × 3000 pixels or less.')
+        return image

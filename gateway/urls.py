@@ -10,6 +10,9 @@ from .views import (
     CheckoutDetailAPIView,
     checkout_page_view,
     merchant_dashboard_view,
+    merchant_integration_guide_view,
+    merchant_payment_method_action,
+    payment_method_qr_view,
     admin_dashboard_view,
     admin_action_api,
     dashboard_home,
@@ -39,6 +42,9 @@ urlpatterns = [
     # Merchant Dashboard PWA
     path('', dashboard_home, name='root-redirect'),
     path('dashboard/', merchant_dashboard_view, name='merchant-dashboard'),
+    path('dashboard/integration/', merchant_integration_guide_view, name='merchant-integration-guide'),
+    path('api/v1/merchant/payment-method/', merchant_payment_method_action, name='merchant-payment-method-action'),
+    path('payment-qr/<uuid:payment_method_id>/', payment_method_qr_view, name='payment-method-qr'),
 
     # Hosted Checkout Customer UI
     path('checkout/<uuid:reference_id>/', checkout_page_view, name='hosted-checkout'),

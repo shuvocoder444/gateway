@@ -33,6 +33,7 @@ class MFSProvider(models.TextChoices):
     ROCKET = 'ROCKET', 'Rocket'
     CELLFIN = 'CELLFIN', 'Cellfin'
     UPAY = 'UPAY', 'Upay'
+    BANGLA_QR = 'BANGLA_QR', 'Bangla QR'
     OTHER = 'OTHER', 'Other'
 
 
@@ -77,6 +78,11 @@ class Merchant(models.Model):
         max_length=255,
         help_text="Merchant or business project name"
     )
+    checkout_display_name = models.CharField(max_length=255, blank=True, help_text="Name shown to customers on hosted checkout")
+    logo = models.ImageField(upload_to='merchant_logos/%Y/%m/', blank=True, null=True, help_text="Merchant logo shown on hosted checkout")
+    checkout_copyright = models.CharField(max_length=180, blank=True, help_text="Optional merchant copyright/footer text on hosted checkout")
+    support_email = models.EmailField(blank=True, help_text="Customer support email shown on hosted checkout")
+    support_phone = models.CharField(max_length=32, blank=True, help_text="Customer support phone shown on hosted checkout")
     email = models.EmailField(
         blank=True,
         null=True,
@@ -184,7 +190,8 @@ class PaymentMethod(models.Model):
     )
     account_number = models.CharField(
         max_length=32,
-        help_text="Receiving wallet/phone number (e.g. 017XXXXXXXX)"
+        blank=True,
+        help_text="Receiving wallet/phone number; optional for Bangla QR"
     )
     instructions = models.TextField(
         blank=True,

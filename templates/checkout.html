@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Checkout | {{ merchant.name }}</title>
+    <title>Secure Checkout | {{ merchant.checkout_display_name|default:merchant.name }}</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter & Outfit -->
@@ -52,42 +52,39 @@
         }
     </style>
 </head>
-<body class="bg-slate-950 min-h-screen text-slate-800 font-sans antialiased flex flex-col justify-between selection:bg-rose-500 selection:text-white">
-
-    <!-- Background Glow Effects -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div class="absolute -top-40 -left-40 w-96 h-96 bg-rose-600/20 rounded-full blur-[128px]"></div>
-        <div class="absolute top-1/2 -right-40 w-96 h-96 bg-orange-600/15 rounded-full blur-[128px]"></div>
-        <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-purple-600/15 rounded-full blur-[128px]"></div>
-    </div>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans antialiased flex flex-col justify-between selection:bg-rose-200 selection:text-slate-900">
 
     <!-- Main Container -->
     <main class="w-full max-w-5xl mx-auto px-4 py-6 md:py-10 flex-1 flex flex-col justify-center">
 
         <!-- Top Navigation / Brand Bar -->
-        <header class="flex items-center justify-between pb-6 border-b border-slate-800/80 mb-6 md:mb-8">
+        <header class="flex items-center justify-between pb-6 border-b border-slate-200 mb-6 md:mb-8">
             <div class="flex items-center space-x-3">
+                {% if merchant.logo %}
+                <img src="{% url 'merchant-logo' merchant.id %}" alt="{{ merchant.checkout_display_name|default:merchant.name }} logo" class="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-1">
+                {% else %}
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-orange-500 flex items-center justify-center text-white font-heading font-extrabold text-xl shadow-lg shadow-rose-600/20">
                     {{ merchant.name|slice:":1"|upper }}
                 </div>
+                {% endif %}
                 <div>
-                    <h1 class="text-lg font-heading font-bold text-white tracking-tight leading-tight">{{ merchant.name }}</h1>
-                    <p class="text-xs text-slate-400 flex items-center gap-1 font-medium">
+                    <h1 class="text-lg font-heading font-bold text-slate-900 tracking-tight leading-tight">{{ merchant.checkout_display_name|default:merchant.name }}</h1>
+                    <p class="text-xs text-slate-500 flex items-center gap-1 font-medium">
                         <svg class="w-3.5 h-3.5 text-emerald-400 inline" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414-1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                         </svg>
-                        Verified MFS Merchant
+                        Secure payment page
                     </p>
                 </div>
             </div>
 
             <!-- Live Expiration Countdown Badge -->
-            <div id="countdown-badge" class="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-full px-3.5 py-1.5 shadow-inner">
+            <div id="countdown-badge" class="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3.5 py-1.5 shadow-sm">
                 <span class="relative flex h-2.5 w-2.5">
                     <span id="countdown-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span id="countdown-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
-                <span class="text-xs text-slate-400 font-medium">Expires in:</span>
+                <span class="text-xs text-slate-500 font-medium">Expires in:</span>
                 <span id="countdown-display" class="font-mono font-bold text-sm text-emerald-400 tracking-wider">15:00</span>
             </div>
         </header>
@@ -171,12 +168,12 @@
                 </div>
 
                 <!-- Safe Checkout Guarantee Card -->
-                <div class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 text-slate-400 text-xs flex items-center gap-3 shadow-lg">
-                    <div class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-emerald-400 shrink-0">
+                <div class="bg-white border border-slate-200 rounded-2xl p-4 text-slate-600 text-xs flex items-center gap-3 shadow-sm">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                     </div>
                     <div>
-                        <span class="font-semibold text-slate-200 block">Instant Automated Verification</span>
+                        <span class="font-semibold text-slate-800 block">Payment verification</span>
                         Incoming payment SMS is matched via our real-time forwarder bridge.
                     </div>
                 </div>
@@ -204,6 +201,7 @@
                                 data-type="{{ method.get_account_type_display }}"
                                 data-type-raw="{{ method.account_type }}"
                                 data-instructions="{{ method.instructions }}"
+                                data-qr-url="{% if method.qr_code %}{% url 'payment-method-qr' method.id %}?v={{ method.updated_at|date:'U' }}{% endif %}"
                                 onclick="selectMethod(this)"
                                 class="method-tab flex flex-col items-center justify-center p-3 rounded-xl border-2 transition duration-200 {% if forloop.first %}selected-tab bg-slate-50 border-rose-600 shadow-md{% else %}border-slate-200 hover:border-slate-300 bg-white{% endif %}">
 
@@ -214,6 +212,7 @@
                                 {% elif method.provider == 'ROCKET' %}bg-rocket
                                 {% elif method.provider == 'CELLFIN' %}bg-cellfin
                                 {% elif method.provider == 'UPAY' %}bg-upay text-slate-900
+                                {% elif method.provider == 'BANGLA_QR' %}bg-blue-700
                                 {% else %}bg-slate-700{% endif %}">
                                 {{ method.get_provider_display|slice:":1" }}
                             </div>
@@ -234,11 +233,19 @@
                             <span id="active-method-type-badge" class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">
                                 Personal (Send Money)
                             </span>
-                            <span class="text-xs text-slate-500 font-medium">Send money to this number:</span>
+                            <span id="payment-instruction-heading" class="text-xs text-slate-500 font-medium">Send money to this number:</span>
+                        </div>
+
+                        <div id="payment-qr-panel" class="{% if not payment_methods.0.qr_code %}hidden{% endif %} mb-4 rounded-xl border border-slate-200 bg-white p-4 text-center">
+                            <p id="payment-qr-caption" class="mb-3 text-xs font-semibold text-slate-700">Scan this payment QR using your bank or MFS app.</p>
+                            <img id="payment-qr-image" src="{% if payment_methods.0.qr_code %}{% url 'payment-method-qr' payment_methods.0.id %}?v={{ payment_methods.0.updated_at|date:'U' }}{% endif %}" alt="Payment QR code" class="mx-auto max-h-64 w-auto max-w-full object-contain">
+                        </div>
+                        <div id="bangla-qr-verification-note" class="{% if payment_methods.0.provider != 'BANGLA_QR' %}hidden{% endif %} mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                            QR scan ও payment complete করার পর TrxID দিন। এই gateway এখনো bank/NPSB-এর সরাসরি Bangla QR status API-তে যুক্ত নয়; verification-এর জন্য merchant-এর SMS Forwarder-এ matching transaction SMS আসতে হবে।
                         </div>
 
                         <!-- Big Copyable Account Number -->
-                        <div class="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-sm mb-4">
+                        <div id="payment-account-number-row" class="{% if payment_methods.0.provider == 'BANGLA_QR' %}hidden{% endif %} flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-sm mb-4">
                             <span id="active-account-number" class="font-mono text-lg md:text-xl font-bold text-slate-900 tracking-wider">
                                 {{ payment_methods.0.account_number }}
                             </span>
@@ -259,7 +266,7 @@
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">2</span>
-                                <span>Enter the number above and amount <strong class="text-slate-900">৳ {{ invoice.amount }}</strong>.</span>
+                                <span id="step-instruction-2">Enter the number above and amount <strong class="text-slate-900">৳ {{ invoice.amount }}</strong>.</span>
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">3</span>
@@ -369,11 +376,14 @@
     </main>
 
     <!-- Footer -->
-    <footer class="py-6 text-center text-xs text-slate-400 border-t border-slate-800/80">
-        <p class="flex items-center justify-center gap-1.5 font-medium">
-            <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
-            256-Bit SSL Encrypted &bull; Multi-Tenant MFS Gateway Aggregator
+    <footer class="mt-8 border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+        {% if merchant.checkout_copyright %}<p class="font-medium text-slate-700">{{ merchant.checkout_copyright }}</p>{% else %}<p class="font-medium">© {% now "Y" %} {{ merchant.checkout_display_name|default:merchant.name }}</p>{% endif %}
+        {% if merchant.support_email or merchant.support_phone %}
+        <p class="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            {% if merchant.support_email %}<a class="hover:text-slate-800" href="mailto:{{ merchant.support_email }}">{{ merchant.support_email }}</a>{% endif %}
+            {% if merchant.support_phone %}<a class="hover:text-slate-800" href="tel:{{ merchant.support_phone }}">{{ merchant.support_phone }}</a>{% endif %}
         </p>
+        {% endif %}
     </footer>
 
     <!-- Client-side Logic Script -->
@@ -446,15 +456,41 @@
             const typeName = btn.dataset.type;
             const typeRaw = btn.dataset.typeRaw;
             const instructions = btn.dataset.instructions;
+            const qrUrl = btn.dataset.qrUrl;
+            const isBanglaQr = provider === 'BANGLA_QR';
+
+            const qrPanel = document.getElementById('payment-qr-panel');
+            const qrImage = document.getElementById('payment-qr-image');
+            const numberRow = document.getElementById('payment-account-number-row');
+            if (qrUrl) {
+                qrImage.src = qrUrl;
+                qrImage.alt = `${providerName} payment QR code`;
+                qrPanel.classList.remove('hidden');
+            } else {
+                qrImage.removeAttribute('src');
+                qrPanel.classList.add('hidden');
+            }
+            numberRow.classList.toggle('hidden', isBanglaQr);
+            document.getElementById('payment-instruction-heading').textContent = isBanglaQr
+                ? 'Scan the Bangla QR code to pay:'
+                : (qrUrl ? 'Scan the QR or send money to this number:' : 'Send money to this number:');
+            document.getElementById('payment-qr-caption').textContent = isBanglaQr
+                ? 'Bangla QR: scan with a supported bank or MFS app, then enter the invoice amount.'
+                : `Scan this ${providerName} QR using your bank or MFS app.`;
+            document.getElementById('bangla-qr-verification-note').classList.toggle('hidden', !isBanglaQr);
 
             activeAccountNumber = number;
             document.getElementById('active-account-number').textContent = number;
-            document.getElementById('active-method-type-badge').textContent = `${typeName}`;
+            document.getElementById('active-method-type-badge').textContent = isBanglaQr ? 'Bangla QR' : `${typeName}`;
+            document.getElementById('step-instruction-2').innerHTML = isBanglaQr
+                ? `Enter the invoice amount <strong class="text-slate-900">৳ {{ invoice.amount }}</strong> and confirm in your app.`
+                : `Enter the number above and amount <strong class="text-slate-900">৳ {{ invoice.amount }}</strong>.`;
 
             // Adjust step 1 wording
             const step1 = document.getElementById('step-instruction-1');
             let actionName = "Send Money";
-            if (typeRaw === 'MERCHANT') actionName = "Make Payment";
+            if (isBanglaQr) actionName = "Scan the Bangla QR code";
+            else if (typeRaw === 'MERCHANT') actionName = "Make Payment";
             else if (typeRaw === 'AGENT') actionName = "Cash Out";
             step1.innerHTML = `Open your ${providerName} app and select <strong>${actionName}</strong>.`;
 

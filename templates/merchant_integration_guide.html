@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Django Setup Guide | {{ selected_merchant.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    body { background: #f8fafc !important; color: #0f172a !important; }
+    body > nav { background: rgba(255,255,255,.96) !important; border-color: #e2e8f0 !important; }
+    body > nav .text-white { color: #0f172a !important; }
+    body > nav .bg-slate-800 { background: #f1f5f9 !important; color: #334155 !important; border-color: #e2e8f0 !important; }
+    .guide-code { white-space: pre; overflow-x: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl space-y-6">
+    <a href="{% url 'merchant-dashboard' %}" class="inline-flex items-center gap-2 text-sm font-semibold text-rose-700 hover:text-rose-800">← Merchant Dashboard</a>
+
+    <header class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <p class="text-xs font-bold uppercase tracking-widest text-rose-600">Integration Guide · Django</p>
+        <h1 class="mt-2 text-2xl font-extrabold text-slate-900 sm:text-3xl">আপনার Django website-এ Gateway যুক্ত করুন</h1>
+        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600">এই নির্দেশনা আপনার developer-কে দিতে পারেন। প্রথমে API credentials ও payment number সেট করুন, তারপর backend থেকে checkout তৈরি এবং signed webhook যাচাই করুন।</p>
+        <div class="mt-5 flex flex-wrap gap-3">
+            <a href="{% url 'merchant-dashboard' %}#merchant-api" class="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">API Credentials দেখুন</a>
+            <a href="{% url 'merchant-dashboard' %}#merchant-connections" class="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700">Payment Number সেট করুন</a>
+        </div>
+    </header>
+
+    <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+        <h2 class="font-bold">Payment শুরু করার আগে</h2>
+        <ol class="mt-2 list-decimal space-y-1 pl-5">
+            <li>Dashboard-এর <b>Payment Accounts</b> থেকে bKash/Nagad/Rocket number যোগ করে Active করুন।</li>
+            <li>এই merchant-এর API Key এবং API Secret নিরাপদে server environment-এ রাখুন।</li>
+            <li>Super Admin-কে আপনার আলাদা Webhook URL ও Return URL merchant settings-এ configure করতে বলুন।</li>
+            <li>Payment matching চালাতে gateway-র SMS Forwarder/device configuration সম্পূর্ণ থাকতে হবে।</li>
+        </ol>
+        <p class="mt-3"><code>callback_url</code> checkout request-এ পাঠাবেন না। Gateway-তে এটি webhook destination এবং customer return—দুই কাজেই ব্যবহৃত হয়। Merchant settings-এ আলাদা URL configure করান।</p>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <h2 class="text-lg font-bold text-slate-900">ধাপ ১ — Django project প্রস্তুত করুন</h2>
+        <p class="mt-2 text-sm text-slate-600">HTTP request পাঠাতে <code>requests</code> ইনস্টল করুন:</p>
+        <pre class="guide-code mt-3 rounded-xl bg-slate-900 p-4 text-xs text-slate-100"><code>pip install requests</code></pre>
+        <p class="mt-4 text-sm text-slate-600">Project root-এ `.env` ফাইল বা hosting environment settings-এ credentials দিন:</p>
+        <pre class="guide-code mt-3 rounded-xl bg-slate-900 p-4 text-xs text-emerald-200"><code>GATEWAY_BASE_URL=https://payment.webkoders.com
+GATEWAY_API_KEY=আপনার_API_KEY
+GATEWAY_API_SECRET=আপনার_API_SECRET</code></pre>
+        <p class="mt-3 text-xs text-rose-700">`.env` GitHub-এ push করবেন না। API key/secret HTML বা JavaScript-এ রাখবেন না।</p>
+        <p class="mt-4 text-sm text-slate-600">`settings.py`-এ environment থেকে পড়ুন (এখানে `python-decouple` ব্যবহার করা হয়েছে):</p>
+        <pre class="guide-code mt-3 rounded-xl bg-slate-900 p-4 text-xs text-slate-100"><code>pip install python-decouple
+
+# settings.py
+from decouple import config
+
+GATEWAY_BASE_URL = config(
+    "GATEWAY_BASE_URL", default="https://payment.webkoders.com"
+).rstrip("/")
+GATEWAY_API_KEY = config("GATEWAY_API_KEY")
+GATEWAY_API_SECRET = config("GATEWAY_API_SECRET")</code></pre>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <h2 class="text-lg font-bold text-slate-900">ধাপ ২ — Checkout invoice তৈরি করুন</h2>
+        <p class="mt-2 text-sm leading-6 text-slate-600">Browser থেকে amount নেবেন না; নিজের database-এর Order object থেকে নিন। উদাহরণে `Order` model-এর `amount`, `customer_name`, `customer_email`, `customer_phone` field আছে ধরে নেওয়া হয়েছে। নিজের field name অনুযায়ী বদলাবেন।</p>
+        <pre class="guide-code mt-4 rounded-xl bg-slate-900 p-4 text-xs leading-5 text-slate-100"><code># payments/services.py
+import requests
+from django.conf import settings
+
+class GatewayError(Exception):
+    pass
+
+def create_gateway_checkout(order):
+    payload = {
+        "order_id": str(order.pk),
+        "amount": f"{order.amount:.2f}",
+        "currency": "BDT",
+        "customer_name": order.customer_name or "",
+        "customer_email": order.customer_email or None,
+        "customer_phone": order.customer_phone or "",
+        "metadata": {"local_order_id": str(order.pk)},
+    }
+    try:
+        response = requests.post(
+            f"{settings.GATEWAY_BASE_URL}/api/v1/checkout/create/",
+            headers={"X-API-KEY": settings.GATEWAY_API_KEY},
+            json=payload,
+            timeout=20,
+        )
+        response.raise_for_status()
+        result = response.json()
+    except (requests.RequestException, ValueError) as exc:
+        raise GatewayError("Gateway checkout তৈরি করা যায়নি") from exc
+
+    if result.get("status") != "success" or not result.get("checkout_url"):
+        raise GatewayError("Gateway checkout link দেয়নি")
+    return result</code></pre>
+        <p class="mt-3 text-sm text-slate-600">API endpoint: <code>POST https://payment.webkoders.com/api/v1/checkout/create/</code>. Header: <code>X-API-KEY</code>. Amount কমপক্ষে <code>1.00 BDT</code>। Response-এর <code>checkout_url</code> customer-কে দিন; <code>reference_id</code> local order-এ সংরক্ষণ করুন।</p>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <h2 class="text-lg font-bold text-slate-900">ধাপ ৩ — Pay button থেকে redirect করুন</h2>
+        <p class="mt-2 text-sm text-slate-600">Logged-in customer-এর নিজের order খুঁজুন। উদাহরণের `user`, `payment_status`, `gateway_reference` field আপনার model-এর সঙ্গে মিলিয়ে নিন।</p>
+        <pre class="guide-code mt-4 rounded-xl bg-slate-900 p-4 text-xs leading-5 text-slate-100"><code># payments/views.py
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect
+from django.views.decorators.http import require_POST
+from shop.models import Order
+from .services import GatewayError, create_gateway_checkout
+
+@login_required
+@require_POST
+def start_payment(request, order_id):
+    order = get_object_or_404(Order, pk=order_id, user=request.user)
+    if order.payment_status == "PAID":
+        return redirect("order-detail", order_id=order.pk)
+    try:
+        invoice = create_gateway_checkout(order)
+    except GatewayError as exc:
+        messages.error(request, str(exc))
+        return redirect("order-detail", order_id=order.pk)
+
+    order.gateway_reference = invoice["reference_id"]
+    order.payment_status = "PENDING"
+    order.save(update_fields=["gateway_reference", "payment_status"])
+    return redirect(invoice["checkout_url"])</code></pre>
+        <p class="mt-3 text-sm text-slate-600">নিজের `urls.py`-এ <code>path("orders/&lt;int:order_id&gt;/pay/", views.start_payment, name="start-payment")</code> যোগ করুন। HTML form-এ <code>method="post"</code> এবং <code>{% templatetag openblock %} csrf_token {% templatetag closeblock %}</code> রাখুন।</p>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <h2 class="text-lg font-bold text-slate-900">ধাপ ৪ — HMAC যাচাই করে webhook নিন</h2>
+        <p class="mt-2 text-sm leading-6 text-slate-600">Gateway payment complete হলে আপনার configured Webhook URL-এ <code>payment.completed</code> JSON POST করে। API Secret দিয়ে raw request body-র HMAC-SHA256 যাচাই করুন:</p>
+        <pre class="guide-code mt-4 rounded-xl bg-slate-900 p-4 text-xs leading-5 text-slate-100"><code># payments/views.py
+import hashlib, hmac, json
+from decimal import Decimal, InvalidOperation
+from django.conf import settings
+from django.db import transaction
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from shop.models import Order
+
+@csrf_exempt  # এই view-তে HMAC signature যাচাই করা হয়
+@require_POST
+def gateway_webhook(request):
+    received = request.headers.get("X-Signature", "")
+    expected = hmac.new(
+        settings.GATEWAY_API_SECRET.encode("utf-8"),
+        request.body,  # raw bytes; JSON parse/re-encode করবেন না
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected, received):
+        return HttpResponse("Invalid signature", status=400)
+
+    try:
+        event = json.loads(request.body)
+        if event.get("event") != "payment.completed":
+            return HttpResponse("Ignored", status=200)
+        if event.get("status") != "COMPLETED":
+            return HttpResponse("Not completed", status=400)
+
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=event["order_id"])
+            if str(order.gateway_reference) != str(event["reference_id"]):
+                return HttpResponse("Invoice mismatch", status=400)
+            if Decimal(str(order.amount)) != Decimal(str(event["amount"])):
+                return HttpResponse("Amount mismatch", status=400)
+            if event.get("currency") != "BDT":
+                return HttpResponse("Currency mismatch", status=400)
+
+            # Notification একাধিকবার আসতে পারে; paid update idempotent রাখুন।
+            if order.payment_status != "PAID":
+                order.payment_status = "PAID"
+                order.gateway_trx_id = event.get("trx_id", "")
+                order.save(update_fields=["payment_status", "gateway_trx_id"])
+    except (KeyError, ValueError, TypeError, InvalidOperation, Order.DoesNotExist):
+        return HttpResponse("Invalid notification", status=400)
+    return HttpResponse("OK", status=200)</code></pre>
+        <p class="mt-3 text-xs leading-5 text-rose-700">উদাহরণে `gateway_reference`, `gateway_trx_id`, `payment_status` field ধরে নেওয়া হয়েছে। আপনার Order model-এ না থাকলে field যোগ করে migration চালান। অন্য customer-এর order update ঠেকাতে local order ownership/reference মিলিয়ে নিন।</p>
+        <p class="mt-3 text-sm text-slate-600">`urls.py`-এ webhook route দিন: <code>path("payments/gateway-webhook/", views.gateway_webhook)</code>। `@csrf_exempt` শুধু এই webhook view-তে রাখুন; signature যাচাই ছাড়া paid করবেন না।</p>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <h2 class="text-lg font-bold text-slate-900">ধাপ ৫ — Return page ও live verification</h2>
+        <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-600">
+            <li>Customer checkout শেষে Return URL-এ ফিরবে। শুধু ফিরে এসেছে বলে paid দেখাবেন না; webhook-এর অপেক্ষায় Pending দেখান।</li>
+            <li>Webhook না এলে server log ও Super Admin-এর webhook URL/delivery settings পরীক্ষা করুন। Webhook endpoint public HTTPS হতে হবে এবং `200` response দিতে হবে।</li>
+            <li>Invoice মিলিয়ে দেখতে `GET /api/v1/checkout/&lt;reference_id&gt;/` ব্যবহার করা যায়। শুধু নিজের database-এ সংরক্ষিত reference ID দিয়ে status যাচাই করুন।</li>
+            <li>Gateway যাচাইয়ের জন্য merchant payment number এবং SMS Forwarder/device setup সক্রিয় থাকতে হবে; checkout link তৈরি হওয়া মানেই payment complete নয়।</li>
+        </ol>
+    </section>
+
+    <footer class="pb-4 text-center text-xs text-slate-500">Setup সম্পন্ন হলে Merchant Dashboard-এ ফিরে যান এবং API credentials গোপন রাখুন।</footer>
+</div>
+{% endblock %}

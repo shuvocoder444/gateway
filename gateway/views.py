@@ -1,13 +1,15 @@
-from decimal import Decimal
+import json
+from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import IntegrityError, transaction
-from django.http import HttpResponseForbidden
+from django.http import FileResponse, Http404, HttpResponseForbidden, JsonResponse
+from django.utils.datastructures import MultiValueDict
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from django.utils.text import slugify
@@ -22,6 +24,7 @@ from .models import (
     SMSTransaction,
     InvoiceStatus,
     SMSTransactionStatus,
+    AccountType,
     MFSProvider
 )
 from .authentication import (
@@ -39,7 +42,7 @@ from .serializers import (
     SMSSyncItemSerializer
 )
 from .services import verify_and_settle_invoice
-from .forms import GatewayAuthenticationForm, MerchantRegistrationForm
+from .forms import GatewayAuthenticationForm, MerchantRegistrationForm, PaymentQRCodeUploadForm, MerchantBrandingForm
 
 
 def _account_destination(user):
@@ -380,6 +383,32 @@ def merchant_dashboard_view(request):
     if selected_merchant is None or not selected_merchant.is_active:
         return HttpResponseForbidden('This account has no active merchant workspace.')
     merchants = [selected_merchant]
+    branding_form = MerchantBrandingForm(initial={
+        'checkout_display_name': selected_merchant.checkout_display_name,
+        'checkout_copyright': selected_merchant.checkout_copyright,
+        'support_email': selected_merchant.support_email,
+        'support_phone': selected_merchant.support_phone,
+    })
+
+    if request.method == 'POST' and request.POST.get('form_action') == 'save_branding':
+        branding_form = MerchantBrandingForm(request.POST, request.FILES)
+        if branding_form.is_valid():
+            old_logo = selected_merchant.logo.name if selected_merchant.logo else ''
+            clear_logo = branding_form.cleaned_data['clear_logo']
+            selected_merchant.checkout_display_name = branding_form.cleaned_data['checkout_display_name'].strip()
+            selected_merchant.checkout_copyright = branding_form.cleaned_data['checkout_copyright'].strip()
+            selected_merchant.support_email = branding_form.cleaned_data['support_email'].strip()
+            selected_merchant.support_phone = branding_form.cleaned_data['support_phone'].strip()
+            if branding_form.cleaned_data['logo']:
+                selected_merchant.logo = branding_form.cleaned_data['logo']
+            elif clear_logo:
+                selected_merchant.logo = None
+            selected_merchant.save()
+            if old_logo and (branding_form.cleaned_data['logo'] or clear_logo):
+                selected_merchant.logo.storage.delete(old_logo)
+            messages.success(request, 'Checkout branding saved.')
+            return redirect('/dashboard/#merchant-branding')
+        messages.error(request, 'Please check the checkout branding fields and try again.')
 
     total_volume = Decimal('0.00')
     completed_count = 0
@@ -408,11 +437,172 @@ def merchant_dashboard_view(request):
         'pending_count': pending_count,
         'active_devices_count': active_devices_count,
         'payment_methods': payment_methods,
+        'payment_provider_choices': MFSProvider.choices,
+        'payment_account_type_choices': AccountType.choices,
         'devices': devices,
         'recent_invoices': recent_invoices,
         'now_ts': int(timezone.now().timestamp()),
+        'branding_form': branding_form,
     }
     return render(request, 'dashboard.html', context)
+
+
+@login_required(login_url='login')
+@never_cache
+def merchant_integration_guide_view(request):
+    if request.user.is_superuser:
+        return redirect('admin-dashboard')
+    merchant = getattr(request.user, 'merchant_profile', None)
+    if merchant is None or not merchant.is_active:
+        return HttpResponseForbidden('This account has no active merchant workspace.')
+    return render(request, 'merchant_integration_guide.html', {'selected_merchant': merchant})
+
+
+@login_required(login_url='login')
+@require_POST
+@never_cache
+def merchant_payment_method_action(request):
+    """Let a merchant manage only payment methods belonging to its own workspace."""
+    if request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Merchant account required.'}, status=403)
+    merchant = getattr(request.user, 'merchant_profile', None)
+    if merchant is None or not merchant.is_active:
+        return JsonResponse({'status': 'error', 'message': 'Active merchant workspace required.'}, status=403)
+
+    if request.content_type == 'multipart/form-data':
+        data = request.POST
+    else:
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON body.'}, status=400)
+        if not isinstance(data, dict):
+            return JsonResponse({'status': 'error', 'message': 'Invalid request data.'}, status=400)
+
+    action = data.get('action')
+    if action in ('create', 'update'):
+        provider = str(data.get('provider', '')).upper()
+        account_type = str(data.get('account_type', '')).upper()
+        account_number = str(data.get('account_number', '')).strip()
+        if provider not in dict(MFSProvider.choices):
+            return JsonResponse({'status': 'error', 'message': 'Select a valid payment provider.'}, status=400)
+        if account_type not in dict(AccountType.choices):
+            return JsonResponse({'status': 'error', 'message': 'Select a valid account type.'}, status=400)
+        if (provider != MFSProvider.BANGLA_QR and not account_number) or len(account_number) > 32:
+            return JsonResponse({'status': 'error', 'message': 'Enter an account number up to 32 characters.'}, status=400)
+        try:
+            fee = Decimal(str(data.get('charge_percentage', '0') or '0'))
+            if not fee.is_finite() or fee < 0 or fee > 100 or fee.as_tuple().exponent < -2:
+                raise InvalidOperation
+        except (InvalidOperation, ValueError):
+            return JsonResponse({'status': 'error', 'message': 'Charge must be between 0 and 100 with up to 2 decimals.'}, status=400)
+
+        if action == 'create':
+            payment_method = PaymentMethod(merchant=merchant)
+        else:
+            payment_method = PaymentMethod.objects.filter(merchant=merchant, id=data.get('id')).first()
+            if payment_method is None:
+                return JsonResponse({'status': 'error', 'message': 'Payment account not found.'}, status=404)
+
+        uploaded_qr = request.FILES.get('qr_code')
+        if uploaded_qr:
+            qr_form = PaymentQRCodeUploadForm(files=MultiValueDict({'qr_code': [uploaded_qr]}))
+            if not qr_form.is_valid():
+                return JsonResponse({'status': 'error', 'message': qr_form.errors['qr_code'][0]}, status=400)
+            uploaded_qr = qr_form.cleaned_data['qr_code']
+        clear_qr = str(data.get('clear_qr', '')).lower() in ('1', 'true', 'yes', 'on')
+        if provider == MFSProvider.BANGLA_QR and not uploaded_qr and (not payment_method.qr_code or clear_qr):
+            return JsonResponse({'status': 'error', 'message': 'Upload the merchant-issued Bangla QR image to continue.'}, status=400)
+
+        old_qr_name = payment_method.qr_code.name if payment_method.qr_code else ''
+        qr_storage = PaymentMethod._meta.get_field('qr_code').storage
+        payment_method.provider = provider
+        payment_method.account_type = account_type
+        payment_method.account_number = account_number
+        payment_method.instructions = str(data.get('instructions', '')).strip()
+        payment_method.charge_percentage = fee
+        active_value = data.get('is_active', True)
+        payment_method.is_active = active_value if isinstance(active_value, bool) else str(active_value).lower() in ('1', 'true', 'yes', 'on')
+        if uploaded_qr:
+            payment_method.qr_code = uploaded_qr
+        elif clear_qr:
+            payment_method.qr_code = None
+        payment_method.save()
+        if old_qr_name and (uploaded_qr or clear_qr):
+            qr_storage.delete(old_qr_name)
+        return JsonResponse({
+            'status': 'success',
+            'id': str(payment_method.id),
+            'message': f'{payment_method.get_provider_display()} payment account saved.',
+        })
+
+    payment_method = PaymentMethod.objects.filter(merchant=merchant, id=data.get('id')).first()
+    if payment_method is None:
+        return JsonResponse({'status': 'error', 'message': 'Payment account not found.'}, status=404)
+    if action == 'toggle':
+        payment_method.is_active = not payment_method.is_active
+        payment_method.save(update_fields=['is_active', 'updated_at'])
+        return JsonResponse({'status': 'success', 'is_active': payment_method.is_active})
+    if action == 'delete':
+        if payment_method.qr_code:
+            payment_method.qr_code.delete(save=False)
+        payment_method.delete()
+        return JsonResponse({'status': 'success', 'message': 'Payment account removed.'})
+    return JsonResponse({'status': 'error', 'message': 'Unknown action.'}, status=400)
+
+
+@require_GET
+def payment_method_qr_view(request, payment_method_id):
+    payment_method = PaymentMethod.objects.filter(id=payment_method_id).first()
+    if payment_method is None or not payment_method.qr_code:
+        raise Http404('Payment QR not found.')
+    try:
+        qr_file = payment_method.qr_code.open('rb')
+    except OSError as exc:
+        raise Http404('Payment QR not found.') from exc
+    try:
+        from PIL import Image
+        with Image.open(qr_file) as image:
+            content_type = {
+                'PNG': 'image/png',
+                'JPEG': 'image/jpeg',
+                'WEBP': 'image/webp',
+            }.get(image.format)
+        qr_file.seek(0)
+    except (OSError, ValueError):
+        qr_file.close()
+        raise Http404('Invalid payment QR image.')
+    if content_type not in {'image/png', 'image/jpeg', 'image/webp'}:
+        qr_file.close()
+        raise Http404('Unsupported payment QR image.')
+    response = FileResponse(qr_file, content_type=content_type)
+    response['Cache-Control'] = 'public, max-age=300'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
+@require_GET
+def merchant_logo_view(request, merchant_id):
+    merchant = Merchant.objects.filter(id=merchant_id).only('logo').first()
+    if merchant is None or not merchant.logo:
+        raise Http404('Merchant logo not found.')
+    try:
+        logo_file = merchant.logo.open('rb')
+        from PIL import Image
+        with Image.open(logo_file) as image:
+            content_type = {'PNG': 'image/png', 'JPEG': 'image/jpeg', 'WEBP': 'image/webp'}.get(image.format)
+        logo_file.seek(0)
+    except (OSError, ValueError) as exc:
+        if 'logo_file' in locals():
+            logo_file.close()
+        raise Http404('Invalid merchant logo.') from exc
+    if content_type not in {'image/png', 'image/jpeg', 'image/webp'}:
+        logo_file.close()
+        raise Http404('Unsupported merchant logo.')
+    response = FileResponse(logo_file, content_type=content_type)
+    response['Cache-Control'] = 'public, max-age=300'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 
 def service_worker_view(request):
@@ -516,8 +706,6 @@ def admin_dashboard_view(request):
     return render(request, 'admin_dashboard.html', context)
 
 
-from django.http import JsonResponse
-import json
 import secrets
 
 @never_cache
@@ -534,10 +722,15 @@ def admin_action_api(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Only POST method is allowed.'}, status=405)
 
-    try:
-        data = json.loads(request.body.decode('utf-8'))
-    except Exception:
-        return JsonResponse({'status': 'error', 'message': 'Invalid JSON body.'}, status=400)
+    if request.content_type == 'multipart/form-data':
+        data = request.POST
+    else:
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except Exception:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON body.'}, status=400)
+        if not isinstance(data, dict):
+            return JsonResponse({'status': 'error', 'message': 'Invalid request data.'}, status=400)
 
     action = data.get('action')
 
@@ -642,22 +835,39 @@ def admin_action_api(request):
 
         provider = data.get('provider', 'BKASH').upper()
         account_number = data.get('account_number', '').strip()
-        if not account_number:
+        account_type = data.get('account_type', 'PERSONAL').upper()
+        if provider not in dict(MFSProvider.choices):
+            return JsonResponse({'status': 'error', 'message': 'Select a valid payment provider.'}, status=400)
+        if account_type not in dict(AccountType.choices):
+            return JsonResponse({'status': 'error', 'message': 'Select a valid account type.'}, status=400)
+        if not account_number and provider != MFSProvider.BANGLA_QR:
             return JsonResponse({'status': 'error', 'message': 'Account number is required.'}, status=400)
 
-        pm = PaymentMethod.objects.create(
+        uploaded_qr = request.FILES.get('qr_code')
+        if uploaded_qr:
+            qr_form = PaymentQRCodeUploadForm(files=MultiValueDict({'qr_code': [uploaded_qr]}))
+            if not qr_form.is_valid():
+                return JsonResponse({'status': 'error', 'message': qr_form.errors['qr_code'][0]}, status=400)
+            uploaded_qr = qr_form.cleaned_data['qr_code']
+        if provider == MFSProvider.BANGLA_QR and not uploaded_qr:
+            return JsonResponse({'status': 'error', 'message': 'Upload the merchant-issued Bangla QR image.'}, status=400)
+
+        pm = PaymentMethod(
             merchant=merchant,
             provider=provider,
-            account_type=data.get('account_type', 'PERSONAL').upper(),
+            account_type=account_type,
             account_number=account_number,
             instructions=data.get('instructions', '').strip(),
             charge_percentage=Decimal(str(data.get('charge_percentage', '0.00') or '0.00')),
             display_order=int(data.get('display_order', 0) or 0),
-            is_active=bool(data.get('is_active', True))
+            is_active=True
         )
+        if uploaded_qr:
+            pm.qr_code = uploaded_qr
+        pm.save()
         return JsonResponse({
             'status': 'success',
-            'message': f'{pm.get_provider_display()} ({pm.account_number}) added successfully.',
+            'message': f'{pm.get_provider_display()} payment method added successfully.',
             'id': str(pm.id)
         })
 
@@ -679,6 +889,8 @@ def admin_action_api(request):
         pm = PaymentMethod.objects.filter(id=pm_id).first()
         if not pm:
             return JsonResponse({'status': 'error', 'message': 'Payment method not found.'}, status=404)
+        if pm.qr_code:
+            pm.qr_code.delete(save=False)
         pm.delete()
         return JsonResponse({'status': 'success', 'message': 'Payment method removed.'})
 

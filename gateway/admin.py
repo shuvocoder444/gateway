@@ -185,6 +185,7 @@ class PaymentMethodAdmin(admin.ModelAdmin):
             MFSProvider.ROCKET: ('#8c3494', '#ffffff'),
             MFSProvider.CELLFIN: ('#00693e', '#ffffff'),
             MFSProvider.UPAY: ('#ffcd00', '#000000'),
+            MFSProvider.BANGLA_QR: ('#0f766e', '#ffffff'),
             MFSProvider.OTHER: ('#475569', '#ffffff'),
         }
         bg, fg = colors.get(obj.provider, ('#475569', '#ffffff'))

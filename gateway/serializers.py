@@ -1,6 +1,7 @@
 import re
 from decimal import Decimal
 from rest_framework import serializers
+from django.urls import reverse
 from .models import (
     Merchant,
     PaymentMethod,
@@ -16,6 +17,14 @@ from .models import (
 class PaymentMethodPublicSerializer(serializers.ModelSerializer):
     provider_name = serializers.CharField(source='get_provider_display', read_only=True)
     account_type_name = serializers.CharField(source='get_account_type_display', read_only=True)
+    qr_code = serializers.SerializerMethodField()
+
+    def get_qr_code(self, obj):
+        if not obj.qr_code:
+            return None
+        path = reverse('payment-method-qr', args=[obj.id])
+        request = self.context.get('request')
+        return request.build_absolute_uri(path) if request else path
 
     class Meta:
         model = PaymentMethod

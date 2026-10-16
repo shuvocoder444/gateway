@@ -1,0 +1,41 @@
+Uploaded files; starting remote checks.
+STEP 1/6 exit=0
+
+
+STEP 2/6 exit=0
+Requirement already satisfied: Django<6.2,>=5.1 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from -r requirements.txt (line 1)) (6.1.2)
+Requirement already satisfied: djangorestframework>=3.14.0 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from -r requirements.txt (line 2)) (3.18.3)
+Requirement already satisfied: django-cors-headers>=4.3.0 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from -r requirements.txt (line 3)) (4.9.0)
+Requirement already satisfied: requests>=2.31.0 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from -r requirements.txt (line 4)) (2.34.2)
+Requirement already satisfied: Pillow>=10.0 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib64/python3.12/site-packages (from -r requirements.txt (line 5)) (12.3.0)
+Requirement already satisfied: whitenoise>=6.5.0 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from -r requirements.txt (line 6)) (6.12.0)
+Requirement already satisfied: asgiref>=3.9.1 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from Django<6.2,>=5.1->-r requirements.txt (line 1)) (3.12.1)
+Requirement already satisfied: sqlparse>=0.5.0 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from Django<6.2,>=5.1->-r requirements.txt (line 1)) (0.6.0)
+Requirement already satisfied: charset_normalizer<4,>=2 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib64/python3.12/site-packages (from requests>=2.31.0->-r requirements.txt (line 4)) (3.5.2)
+Requirement already satisfied: idna<4,>=2.5 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from requests>=2.31.0->-r requirements.txt (line 4)) (3.20)
+Requirement already satisfied: urllib3<3,>=1.26 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from requests>=2.31.0->-r requirements.txt (line 4)) (2.8.0)
+Requirement already satisfied: certifi>=2023.5.7 in /home/webkoders/virtualenv/payment.webkoders.com/3.12/lib/python3.12/site-packages (from requests>=2.31.0->-r requirements.txt (line 4)) (2026.7.22)
+
+
+[notice] A new release of pip is available: 23.1 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
+
+STEP 3/6 exit=0
+Operations to perform:
+  Apply all migrations: admin, auth, contenttypes, gateway, sessions
+Running migrations:
+  No migrations to apply.
+
+
+STEP 4/6 exit=0
+System check identified no issues (0 silenced).
+
+
+STEP 5/6 exit=0
+17 objects imported automatically (use -v 2 for details).
+
+Templates loaded
+
+
+STEP 6/6 exit=0
+
