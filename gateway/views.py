@@ -1,6 +1,16 @@
 from decimal import Decimal
-from django.db import IntegrityError
+from django.contrib import messages
+from django.contrib.auth import login, logout
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.forms import AuthenticationForm
+from django.db import IntegrityError, transaction
+from django.http import HttpResponseForbidden
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from django.utils import timezone
+from django.utils.text import slugify
 from rest_framework import status, views, permissions
 from rest_framework.response import Response
 
@@ -29,6 +39,69 @@ from .serializers import (
     SMSSyncItemSerializer
 )
 from .services import verify_and_settle_invoice
+from .forms import GatewayAuthenticationForm, MerchantRegistrationForm
+
+
+def _account_destination(user):
+    return 'admin-dashboard' if user.is_superuser else 'merchant-dashboard'
+
+
+@never_cache
+def dashboard_home(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    return redirect(_account_destination(request.user))
+
+
+@never_cache
+def account_login(request):
+    if request.user.is_authenticated:
+        return redirect(_account_destination(request.user))
+
+    form = GatewayAuthenticationForm(request, data=request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        user = form.get_user()
+        if not user.is_superuser:
+            merchant = getattr(user, 'merchant_profile', None)
+            if merchant is None or not merchant.is_active:
+                form.add_error(None, 'This account does not have an active merchant workspace.')
+            else:
+                login(request, user)
+                return redirect('merchant-dashboard')
+        else:
+            login(request, user)
+            return redirect('admin-dashboard')
+
+    return render(request, 'accounts/login.html', {'form': form})
+
+
+@never_cache
+def merchant_register(request):
+    if request.user.is_authenticated:
+        return redirect(_account_destination(request.user))
+
+    form = MerchantRegistrationForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            user = form.save()
+            Merchant.objects.create(
+                owner=user,
+                name=form.cleaned_data['business_name'],
+                email=user.email,
+                is_active=True,
+            )
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        messages.success(request, 'Your merchant workspace is ready.')
+        return redirect('merchant-dashboard')
+
+    return render(request, 'accounts/register.html', {'form': form})
+
+
+@require_POST
+@never_cache
+def account_logout(request):
+    logout(request)
+    return redirect('login')
 
 
 class CheckoutCreateAPIView(views.APIView):
@@ -290,6 +363,8 @@ def checkout_page_view(request, reference_id):
     return render(request, 'checkout.html', context)
 
 
+@login_required(login_url='login')
+@never_cache
 def merchant_dashboard_view(request):
     """
     Renders the installable PWA Merchant Dashboard with multi-tenant stats,
@@ -298,15 +373,13 @@ def merchant_dashboard_view(request):
     from django.shortcuts import render
     from django.db.models import Sum
 
-    merchants = list(Merchant.objects.filter(is_active=True).order_by('name'))
-    selected_merchant = None
+    if request.user.is_superuser:
+        return redirect('admin-dashboard')
 
-    merchant_id = request.GET.get('merchant_id')
-    if merchant_id:
-        selected_merchant = next((m for m in merchants if str(m.id) == str(merchant_id)), None)
-
-    if not selected_merchant and merchants:
-        selected_merchant = merchants[0]
+    selected_merchant = getattr(request.user, 'merchant_profile', None)
+    if selected_merchant is None or not selected_merchant.is_active:
+        return HttpResponseForbidden('This account has no active merchant workspace.')
+    merchants = [selected_merchant]
 
     total_volume = Decimal('0.00')
     completed_count = 0
@@ -383,6 +456,8 @@ def manifest_view(request):
     return response
 
 
+@user_passes_test(lambda user: user.is_authenticated and user.is_superuser, login_url='login')
+@never_cache
 def admin_dashboard_view(request):
     """
     Renders the professional Admin Dashboard with sleek sidebar navigation,
@@ -441,18 +516,21 @@ def admin_dashboard_view(request):
     return render(request, 'admin_dashboard.html', context)
 
 
-from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
 import secrets
 
-@csrf_exempt
+@never_cache
 def admin_action_api(request):
     """
     Unified JSON API for the Admin Dashboard to perform full CRUD on
     Merchants, Payment Methods, Android Devices, Invoices, and SMS logs
     without having to navigate to Django standard admin.
     """
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Authentication required.'}, status=401)
+    if not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Super Admin access required.'}, status=403)
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Only POST method is allowed.'}, status=405)
 
@@ -468,24 +546,54 @@ def admin_action_api(request):
     # ==========================
     if action == 'create_merchant':
         name = data.get('name', '').strip()
+        email = data.get('email', '').strip().lower()
+        requested_username = data.get('username', '').strip()
         if not name:
             return JsonResponse({'status': 'error', 'message': 'Merchant name is required.'}, status=400)
-        merchant = Merchant.objects.create(
-            name=name,
-            email=data.get('email', '').strip() or None,
-            webhook_url=data.get('webhook_url', '').strip() or None,
-            return_url=data.get('return_url', '').strip() or None,
-            is_active=bool(data.get('is_active', True))
-        )
+        User = get_user_model()
+        if email and User.objects.filter(email__iexact=email).exists():
+            return JsonResponse({'status': 'error', 'message': 'An account with this email already exists.'}, status=400)
+        if requested_username and User.objects.filter(username=requested_username).exists():
+            return JsonResponse({'status': 'error', 'message': 'That username is already in use.'}, status=400)
+        base_username = requested_username or (email.split('@', 1)[0] if email else '')
+        base_username = slugify(base_username or name).replace('-', '_')[:140] or 'merchant'
+        username = base_username
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            suffix += 1
+            username = f'{base_username[:145]}_{suffix}'
+        password = data.get('password') or secrets.token_urlsafe(15)
+        if len(password) < 8:
+            return JsonResponse({'status': 'error', 'message': 'Password must be at least 8 characters long.'}, status=400)
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    is_staff=False,
+                    is_superuser=False,
+                )
+                merchant = Merchant.objects.create(
+                    owner=user,
+                    name=name,
+                    email=email or None,
+                    webhook_url=data.get('webhook_url', '').strip() or None,
+                    return_url=data.get('return_url', '').strip() or None,
+                    is_active=bool(data.get('is_active', True)),
+                )
+        except IntegrityError:
+            return JsonResponse({'status': 'error', 'message': 'Could not create account; check the username and email.'}, status=400)
         return JsonResponse({
             'status': 'success',
-            'message': f'Merchant "{merchant.name}" created successfully.',
+            'message': f'Merchant "{merchant.name}" and its login account were created successfully.',
             'merchant': {
                 'id': str(merchant.id),
                 'name': merchant.name,
                 'api_key': merchant.api_key,
                 'api_secret': merchant.api_secret
-            }
+            },
+            'account': {'username': username, 'password': password},
         })
 
     elif action == 'toggle_merchant':

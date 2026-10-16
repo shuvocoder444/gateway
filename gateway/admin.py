@@ -76,7 +76,7 @@ class MerchantAdmin(admin.ModelAdmin):
     readonly_fields = ('id', 'api_key', 'api_secret', 'created_at', 'updated_at')
     fieldsets = (
         ('Tenant Profile', {
-            'fields': ('id', 'name', 'email', 'is_active')
+            'fields': ('id', 'owner', 'name', 'email', 'is_active')
         }),
         ('API Authentication & Security', {
             'description': 'Merchant credentials for API request authorization and HMAC signatures.',

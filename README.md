@@ -20,11 +20,11 @@
 
 * **মাল্টি-টেন্যান্ট মার্চেন্ট সিস্টেম:** আনলিমিটেড মার্চেন্ট বা প্রজেক্ট যোগ করা যায়। প্রতিটি মার্চেন্টের নিজস্ব ইউনিক API Key, API Secret, এবং আলাদা Webhook URL থাকে।
 * **ডাইনামিক পেমেন্ট মেথড:** প্রতিটি মার্চেন্ট তাদের নিজস্ব বিকাশ, নগদ, রকেট বা সেলফিন নম্বর (Personal/Agent/Merchant) যুক্ত করতে পারে।
-* **অ�| ড্যাশবোর্ড / পেজ | URL | ইউজার / বিবরণ |
+* **অ�| ড্যাশবোর্ড / পেজ | URL | ইউজার / বিবরণ |
 | :--- | :--- | :--- |
 | 🛡️ **Master Admin Control Center (White Theme)** | `http://127.0.0.1:8000/admin-dashboard/` | সম্পূর্ণ গেটওয়ের অ্যাডমিন কন্ট্রোল, সাদা ক্লিন থিম, সাইডবার ও ডিরেক্ট CRUD |
 | 💼 **Merchant PWA Dashboard** | `http://127.0.0.1:8000/dashboard/` | মার্চেন্ট লেভেল ইনভয়েস, ট্রানজ্যাকশন ও PWA ইনস্টলেশন |
-| ⚙️ **Django Core Superadmin (Optional)** | `http://127.0.0.1:8000/admin/` | ব্যাকএন্ড ডাটাবেজ মডেল ভিউ (*User: `admin` \| Pass: `admin123`*) |
+| ⚙️ **Django Core Superadmin (Optional)** | `http://127.0.0.1:8000/admin/` | ব্যাকএন্ড ডাটাবেজ মডেল ভিউ (*User: `admin` \| Pass: `set securely on the server`*) |
 | 💳 **Hosted Checkout ডেমো** | `http://127.0.0.1:8000/checkout/<invoice-uuid>/` | গ্রাহকদের জন্য তৈরি পেমেন্ট পেজ |
 
 > 💡 **নোট:** আপনাকে আর জ্যাঙ্গো অ্যাডমিন প্যানেলে (`/admin/`) যাওয়ার দরকার নেই! নতুন মার্চেন্ট তৈরি, বিকাশ/নগদ নম্বর অ্যাড, অ্যান্ড্রয়েড ডিভাইস টোকেন জেনারেট, ইনভয়েস তৈরি ও পেমেন্ট ভেরিফাই—সবকিছুই সরাসরি এই **সাদা অ্যাডমিন ড্যাশবোর্ড** (`/admin-dashboard/`) থেকে করা যায়।
@@ -52,7 +52,7 @@
 ### ধাপ ৪: ইনভয়েস তৈরি ও লাইভ চেকআউট (Invoices & Checkout)
 1. সাইডবার থেকে **Invoices & Checkouts** এ যান এবং **"Create Invoice"** বাটনে চাপুন।
 2. টাকার পরিমাণ (যেমন: `500.00`) ও কাস্টমার ইনফো দিয়ে জেনারেট করলেই সরাসরি গ্রাহকের লাইভ চেকআউট পেজ ওপেন হবে।
-3. ইনভয়েস রো থেকে সরাসরি **Checkout**, **Mark Paid**, **Cancel** বা **Delete** করা যাবে।��িতে সরাসরি অ্যাপ হিসেবে ইনস্টলযোগ্য (Offline Service Worker সাপোর্টেড)।
+3. ইনভয়েস রো থেকে সরাসরি **Checkout**, **Mark Paid**, **Cancel** বা **Delete** করা যাবে।��িতে সরাসরি অ্যাপ হিসেবে ইনস্টলযোগ্য (Offline Service Worker সাপোর্টেড)।
 
 ---
 
@@ -92,7 +92,7 @@
 | :--- | :--- | :--- |
 | 🛡️ **Master Admin Control Center** | `http://127.0.0.1:8000/admin-dashboard/` | সম্পূর্ণ গেটওয়ের অ্যাডমিন কন্ট্রোল ও সাইডবার নেভিগেশন |
 | 💼 **Merchant PWA Dashboard** | `http://127.0.0.1:8000/dashboard/` | মার্চেন্ট লেভেল ইনভয়েস, ট্রানজ্যাকশন ও PWA ইনস্টলেশন |
-| ⚙️ **Django Core Superadmin** | `http://127.0.0.1:8000/admin/` | ইউজারনেম: `admin` \| পাসওয়ার্ড: `admin123` |
+| ⚙️ **Django Core Superadmin** | `http://127.0.0.1:8000/admin/` | ইউজারনেম: `admin` \| পাসওয়ার্ড: `set securely on the server` |
 | 💳 **Hosted Checkout ডেমো** | `http://127.0.0.1:8000/checkout/<invoice-uuid>/` | গ্রাহকদের জন্য তৈরি পেমেন্ট পেজ |
 
 ---
@@ -302,3 +302,10 @@ OK
 The Android source project is in `android-sms-forwarder/`. Open that folder in Android Studio (JDK 17 and Android SDK 35), let Gradle sync, then select **Build > Build APK(s)**. Install `app/build/outputs/apk/debug/app-debug.apk` on the payment phone and grant SMS permission. In the app, enter the gateway HTTPS base URL and the device token generated from Admin Dashboard, save settings, then use **Send test heartbeat**. Keep the SIM active and allow background activity/battery use.
 
 The app only queues incoming messages that contain receipt-like wording, an amount, and a TrxID; it forwards those fields to `/api/v1/device/sync-sms/` and retries queued messages when connectivity returns. A prebuilt APK or Play Store release is not included. SMS parsing is not equivalent to a provider-side payment confirmation; use an official provider API/webhook for production-grade verification.
+
+## Sign-in and merchant accounts
+
+- Merchant administrators register at `/register/` and sign in at `/login/`. Each account is linked to one merchant workspace.
+- The Super Admin dashboard at `/admin-dashboard/` is limited to the single Super Admin account.
+- Create or securely reset the Super Admin with `python manage.py create_superadmin --generate-password --adopt-existing`. The command prints the initial password once.
+- No default admin password is used. Configure the production Django secret in the private cPanel environment file before starting the app.

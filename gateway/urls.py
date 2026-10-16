@@ -3,7 +3,6 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 
-from django.shortcuts import redirect
 from .views import (
     CheckoutCreateAPIView,
     DeviceSyncSMSAPIView,
@@ -13,6 +12,10 @@ from .views import (
     merchant_dashboard_view,
     admin_dashboard_view,
     admin_action_api,
+    dashboard_home,
+    account_login,
+    account_logout,
+    merchant_register,
     service_worker_view,
     manifest_view,
     download_sms_forwarder_apk,
@@ -21,6 +24,9 @@ from .views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('login/', account_login, name='login'),
+    path('register/', merchant_register, name='merchant-register'),
+    path('logout/', account_logout, name='logout'),
 
     # PWA Endpoints
     path('serviceworker.js', service_worker_view, name='pwa-serviceworker'),
@@ -31,7 +37,7 @@ urlpatterns = [
     path('api/v1/admin/action/', admin_action_api, name='admin-action-api'),
 
     # Merchant Dashboard PWA
-    path('', lambda request: redirect('admin-dashboard'), name='root-redirect'),
+    path('', dashboard_home, name='root-redirect'),
     path('dashboard/', merchant_dashboard_view, name='merchant-dashboard'),
 
     # Hosted Checkout Customer UI

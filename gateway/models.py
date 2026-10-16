@@ -2,6 +2,7 @@ import uuid
 import secrets
 from decimal import Decimal
 from datetime import timedelta
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -63,6 +64,14 @@ class Merchant(models.Model):
         default=uuid.uuid4,
         editable=False,
         help_text="Tenant UUID primary key"
+    )
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='merchant_profile',
+        help_text="Login account that owns this merchant workspace"
     )
     name = models.CharField(
         max_length=255,

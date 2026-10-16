@@ -119,7 +119,8 @@ def deploy():
     verification_issues = []
     for url in urls:
         try:
-            r = requests.get(url, timeout=15, allow_redirects=False)
+            method = requests.head if '/download/' in url else requests.get
+            r = method(url, timeout=15, allow_redirects=False)
             print(f"  [HTTP {r.status_code}] {url}")
             if r.status_code >= 500:
                 verification_issues.append(f"HTTP {r.status_code}: {url}")

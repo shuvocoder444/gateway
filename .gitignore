@@ -1,2 +1,4 @@
 ﻿.vscode/
 deploy_package.zip
+__pycache__/
+*.py[cod]

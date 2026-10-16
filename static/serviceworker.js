@@ -3,9 +3,8 @@
  * Version: 1.0.0
  */
 
-const CACHE_VERSION = 'mfs-gateway-v1';
+const CACHE_VERSION = 'mfs-gateway-v2';
 const PRECACHE_ASSETS = [
-    '/dashboard/',
     '/manifest.json',
     '/static/icons/icon-192.png',
     '/static/icons/icon-512.png',
@@ -111,6 +110,12 @@ self.addEventListener('fetch', (event) => {
                 );
             })
         );
+        return;
+    }
+
+    // Account pages and merchant data are private; never persist them in the PWA cache.
+    if (url.pathname === '/' || ['/login/', '/register/', '/logout/', '/dashboard/', '/admin-dashboard/', '/admin/', '/checkout/'].some((path) => url.pathname.startsWith(path))) {
+        event.respondWith(fetch(request));
         return;
     }
 

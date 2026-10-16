@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Create Merchant Account | MFS Gateway{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auth-input { width: 100%; border: 1px solid #334155; background: #020617; color: #f8fafc; border-radius: .8rem; padding: .8rem .9rem; outline: none; }
+    .auth-input:focus { border-color: #f43f5e; box-shadow: 0 0 0 3px rgb(244 63 94 / .14); }
+    .auth-input::placeholder { color: #64748b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-8 sm:py-12">
+    <section class="mx-auto max-w-2xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/20">
+        <div class="border-b border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/40 p-7 sm:p-9">
+            <p class="text-xs font-bold uppercase tracking-[.2em] text-rose-400">Merchant onboarding</p>
+            <h1 class="mt-2 text-3xl font-heading font-extrabold text-white">Create your workspace</h1>
+            <p class="mt-2 max-w-xl text-sm leading-6 text-slate-400">Register your business to manage payment methods, invoices, API credentials and SMS forwarder activity from one dashboard.</p>
+        </div>
+
+        <form method="post" class="grid grid-cols-1 gap-5 p-7 sm:grid-cols-2 sm:p-9" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div role="alert" class="sm:col-span-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{{ form.non_field_errors }}</div>
+            {% endif %}
+            {% for field in form %}
+            <div class="{% if field.name == 'business_name' or field.name == 'email' %}sm:col-span-2{% endif %}">
+                <label for="{{ field.id_for_label }}" class="mb-2 block text-sm font-semibold text-slate-200">{{ field.label }}</label>
+                {{ field }}
+                {% if field.name == 'password1' %}<p class="mt-2 text-xs text-slate-500">Use a strong password that is at least 8 characters long.</p>{% endif %}
+                {% for error in field.errors %}<p class="mt-2 text-xs text-rose-300">{{ error }}</p>{% endfor %}
+            </div>
+            {% endfor %}
+            <div class="sm:col-span-2 pt-2">
+                <button type="submit" class="w-full rounded-xl bg-rose-600 px-4 py-3 font-bold text-white shadow-lg shadow-rose-900/25 transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 focus:ring-offset-slate-900">Create merchant account</button>
+                <p class="mt-5 text-center text-sm text-slate-400">Already registered? <a href="{% url 'login' %}" class="font-semibold text-rose-400 hover:text-rose-300">Sign in</a></p>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

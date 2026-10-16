@@ -7,20 +7,26 @@ Configured for Multi-Tenant MFS Payment Gateway with DRF and CORS.
 
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-*2s^a6dsu$!2q*c2g2$8=d6yxtrl(4^)+oic_rdc59i$fls!y&'
-)
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+DEBUG_DEFAULT = 'True' if os.name == 'nt' else 'False'
+DEBUG = os.environ.get('DJANGO_DEBUG', DEBUG_DEFAULT).lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+# Production secrets are loaded from the private cPanel environment file.
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-local-development-only-change-before-deploy'
+    else:
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY must be configured when DEBUG is False.')
+
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get(
+    'ALLOWED_HOSTS', 'payment.webkoders.com,localhost,127.0.0.1'
+).split(',') if host.strip()]
 
 
 # Application definition
@@ -142,6 +148,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 
 # CORS configuration
