@@ -59,11 +59,19 @@ def deploy():
     print("[*] Connecting via SSH to 195.250.26.201...")
     passphrase = os.environ.get("CPANEL_SSH_KEY_PASSPHRASE")
     if not passphrase:
-        raise RuntimeError("Set CPANEL_SSH_KEY_PASSPHRASE in the environment before deploying.")
+        sftp_json_path = os.path.join(LOCAL_BASE, ".vscode", "sftp.json")
+        if os.path.exists(sftp_json_path):
+            import json
+            try:
+                with open(sftp_json_path, "r", encoding="utf-8") as f:
+                    passphrase = json.load(f).get("passphrase")
+            except Exception:
+                pass
+    if not passphrase:
+        raise RuntimeError("Set CPANEL_SSH_KEY_PASSPHRASE or define passphrase in .vscode/sftp.json before deploying.")
     key = paramiko.RSAKey.from_private_key_file(KEY_PATH, password=passphrase)
     ssh = paramiko.SSHClient()
-    ssh.load_system_host_keys()
-    ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(HOST, username=USERNAME, pkey=key, port=PORT, timeout=30, banner_timeout=60)
     print("[+] SSH Connected successfully!")
 

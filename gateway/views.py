@@ -394,6 +394,7 @@ def merchant_dashboard_view(request):
         branding_form = MerchantBrandingForm(request.POST, request.FILES)
         if branding_form.is_valid():
             old_logo = selected_merchant.logo.name if selected_merchant.logo else ''
+            logo_storage = Merchant._meta.get_field('logo').storage
             clear_logo = branding_form.cleaned_data['clear_logo']
             selected_merchant.checkout_display_name = branding_form.cleaned_data['checkout_display_name'].strip()
             selected_merchant.checkout_copyright = branding_form.cleaned_data['checkout_copyright'].strip()
@@ -405,7 +406,7 @@ def merchant_dashboard_view(request):
                 selected_merchant.logo = None
             selected_merchant.save()
             if old_logo and (branding_form.cleaned_data['logo'] or clear_logo):
-                selected_merchant.logo.storage.delete(old_logo)
+                logo_storage.delete(old_logo)
             messages.success(request, 'Checkout branding saved.')
             return redirect('/dashboard/#merchant-branding')
         messages.error(request, 'Please check the checkout branding fields and try again.')
@@ -586,6 +587,7 @@ def merchant_logo_view(request, merchant_id):
     merchant = Merchant.objects.filter(id=merchant_id).only('logo').first()
     if merchant is None or not merchant.logo:
         raise Http404('Merchant logo not found.')
+    logo_file = None
     try:
         logo_file = merchant.logo.open('rb')
         from PIL import Image
@@ -593,7 +595,7 @@ def merchant_logo_view(request, merchant_id):
             content_type = {'PNG': 'image/png', 'JPEG': 'image/jpeg', 'WEBP': 'image/webp'}.get(image.format)
         logo_file.seek(0)
     except (OSError, ValueError) as exc:
-        if 'logo_file' in locals():
+        if logo_file is not None:
             logo_file.close()
         raise Http404('Invalid merchant logo.') from exc
     if content_type not in {'image/png', 'image/jpeg', 'image/webp'}:

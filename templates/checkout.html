@@ -64,7 +64,7 @@
                 <img src="{% url 'merchant-logo' merchant.id %}" alt="{{ merchant.checkout_display_name|default:merchant.name }} logo" class="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-1">
                 {% else %}
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-orange-500 flex items-center justify-center text-white font-heading font-extrabold text-xl shadow-lg shadow-rose-600/20">
-                    {{ merchant.name|slice:":1"|upper }}
+                    {{ merchant.checkout_display_name|default:merchant.name|slice:":1"|upper }}
                 </div>
                 {% endif %}
                 <div>
@@ -78,15 +78,6 @@
                 </div>
             </div>
 
-            <!-- Live Expiration Countdown Badge -->
-            <div id="countdown-badge" class="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3.5 py-1.5 shadow-sm">
-                <span class="relative flex h-2.5 w-2.5">
-                    <span id="countdown-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span id="countdown-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                <span class="text-xs text-slate-500 font-medium">Expires in:</span>
-                <span id="countdown-display" class="font-mono font-bold text-sm text-emerald-400 tracking-wider">15:00</span>
-            </div>
         </header>
 
         {% if invoice.status == 'COMPLETED' %}
@@ -126,6 +117,25 @@
 
         {% else %}
         <!-- Active Checkout Grid -->
+        <section id="countdown-card" class="relative mb-6 flex flex-col gap-3 overflow-hidden rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 pb-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pb-6" aria-label="Checkout expiration timer">
+            <div class="flex items-center gap-3">
+                <span id="countdown-indicator" class="relative flex h-4 w-4 shrink-0">
+                    <span id="countdown-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-60"></span>
+                    <span id="countdown-dot" class="relative inline-flex h-4 w-4 rounded-full bg-amber-500"></span>
+                </span>
+                <div>
+                    <p id="countdown-label" class="text-xs font-bold uppercase tracking-wide text-amber-900">Complete your payment before the link expires</p>
+                    <p class="mt-0.5 text-xs text-amber-800">This checkout link is temporary.</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-900">Time left</p>
+                <div id="countdown-display" class="font-mono text-5xl font-extrabold leading-none tracking-wider text-amber-950 tabular-nums sm:text-6xl" role="timer" aria-live="off">15:00</div>
+            </div>
+            <div class="absolute bottom-0 left-0 h-1.5 w-full overflow-hidden bg-amber-200">
+                <div id="countdown-progress" class="h-full w-full rounded-full bg-amber-500 transition-[width] duration-1000 ease-linear"></div>
+            </div>
+        </section>
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
             <!-- Left Column: Order Summary (4 Cols) -->
@@ -237,15 +247,15 @@
                         </div>
 
                         <div id="payment-qr-panel" class="{% if not payment_methods.0.qr_code %}hidden{% endif %} mb-4 rounded-xl border border-slate-200 bg-white p-4 text-center">
-                            <p id="payment-qr-caption" class="mb-3 text-xs font-semibold text-slate-700">Scan this payment QR using your bank or MFS app.</p>
-                            <img id="payment-qr-image" src="{% if payment_methods.0.qr_code %}{% url 'payment-method-qr' payment_methods.0.id %}?v={{ payment_methods.0.updated_at|date:'U' }}{% endif %}" alt="Payment QR code" class="mx-auto max-h-64 w-auto max-w-full object-contain">
+                            <p id="payment-qr-caption" class="mb-3 text-xs font-semibold text-slate-700">Scan this payment QR with the matching app to pay without copying the account number.</p>
+                            <img id="payment-qr-image" src="{% if payment_methods.0.qr_code %}{% url 'payment-method-qr' payment_methods.0.id %}?v={{ payment_methods.0.updated_at|date:'U' }}{% endif %}" alt="Payment QR code" class="mx-auto max-h-72 w-auto max-w-full object-contain">
                         </div>
                         <div id="bangla-qr-verification-note" class="{% if payment_methods.0.provider != 'BANGLA_QR' %}hidden{% endif %} mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
                             QR scan ও payment complete করার পর TrxID দিন। এই gateway এখনো bank/NPSB-এর সরাসরি Bangla QR status API-তে যুক্ত নয়; verification-এর জন্য merchant-এর SMS Forwarder-এ matching transaction SMS আসতে হবে।
                         </div>
 
                         <!-- Big Copyable Account Number -->
-                        <div id="payment-account-number-row" class="{% if payment_methods.0.provider == 'BANGLA_QR' %}hidden{% endif %} flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-sm mb-4">
+                        <div id="payment-account-number-row" class="{% if payment_methods.0.provider == 'BANGLA_QR' or payment_methods.0.qr_code %}hidden{% endif %} flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-sm mb-4">
                             <span id="active-account-number" class="font-mono text-lg md:text-xl font-bold text-slate-900 tracking-wider">
                                 {{ payment_methods.0.account_number }}
                             </span>
@@ -378,9 +388,9 @@
     <!-- Footer -->
     <footer class="mt-8 border-t border-slate-200 py-6 text-center text-xs text-slate-500">
         {% if merchant.checkout_copyright %}<p class="font-medium text-slate-700">{{ merchant.checkout_copyright }}</p>{% else %}<p class="font-medium">© {% now "Y" %} {{ merchant.checkout_display_name|default:merchant.name }}</p>{% endif %}
-        {% if merchant.support_email or merchant.support_phone %}
+        {% if merchant.support_email or merchant.email or merchant.support_phone %}
         <p class="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-            {% if merchant.support_email %}<a class="hover:text-slate-800" href="mailto:{{ merchant.support_email }}">{{ merchant.support_email }}</a>{% endif %}
+            {% if merchant.support_email or merchant.email %}<a class="hover:text-slate-800" href="mailto:{{ merchant.support_email|default:merchant.email }}">{{ merchant.support_email|default:merchant.email }}</a>{% endif %}
             {% if merchant.support_phone %}<a class="hover:text-slate-800" href="tel:{{ merchant.support_phone }}">{{ merchant.support_phone }}</a>{% endif %}
         </p>
         {% endif %}
@@ -397,6 +407,9 @@
         const countdownDisplay = document.getElementById('countdown-display');
         const countdownPing = document.getElementById('countdown-ping');
         const countdownDot = document.getElementById('countdown-dot');
+        const countdownCard = document.getElementById('countdown-card');
+        const countdownProgress = document.getElementById('countdown-progress');
+        const countdownLabel = document.getElementById('countdown-label');
         const verifyBtn = document.getElementById('verify-submit-btn');
 
         function formatTime(seconds) {
@@ -405,18 +418,34 @@
             return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
+        function updateCountdownAppearance() {
+            if (!countdownDisplay) return;
+            countdownDisplay.textContent = formatTime(Math.max(remainingSeconds, 0));
+            if (countdownProgress) countdownProgress.style.width = `${Math.max(0, Math.min(100, remainingSeconds / 900 * 100))}%`;
+            if (remainingSeconds <= 180) {
+                countdownDisplay.classList.remove('text-amber-950');
+                countdownDisplay.classList.add('text-rose-700');
+                if (countdownCard) countdownCard.classList.replace('bg-amber-50', 'bg-rose-50');
+                if (countdownCard) countdownCard.classList.replace('border-amber-300', 'border-rose-300');
+                if (countdownProgress) countdownProgress.classList.replace('bg-amber-500', 'bg-rose-600');
+                if (countdownLabel) {
+                    countdownLabel.classList.replace('text-amber-900', 'text-rose-800');
+                    countdownLabel.textContent = remainingSeconds > 0 ? 'Time is running out — finish your payment now' : 'This checkout link has expired';
+                }
+                if (countdownDot) countdownDot.classList.replace('bg-amber-500', 'bg-rose-600');
+                if (countdownPing) countdownPing.classList.replace('bg-amber-400', 'bg-rose-400');
+            }
+        }
+
         if (countdownDisplay && remainingSeconds > 0) {
-            countdownDisplay.textContent = formatTime(remainingSeconds);
+            updateCountdownAppearance();
 
             const timerInterval = setInterval(() => {
                 remainingSeconds--;
                 if (remainingSeconds <= 0) {
                     clearInterval(timerInterval);
-                    countdownDisplay.textContent = "00:00";
-                    countdownDisplay.classList.remove('text-emerald-400');
-                    countdownDisplay.classList.add('text-rose-500');
-                    if (countdownDot) countdownDot.classList.replace('bg-emerald-500', 'bg-rose-500');
-                    if (countdownPing) countdownPing.classList.replace('bg-emerald-400', 'bg-rose-400');
+                    remainingSeconds = 0;
+                    updateCountdownAppearance();
 
                     // Disable inputs and show expiration alert
                     if (verifyBtn) {
@@ -429,15 +458,7 @@
                     return;
                 }
 
-                countdownDisplay.textContent = formatTime(remainingSeconds);
-
-                // Warning state when under 3 minutes
-                if (remainingSeconds < 180) {
-                    countdownDisplay.classList.remove('text-emerald-400');
-                    countdownDisplay.classList.add('text-amber-400');
-                    if (countdownDot) countdownDot.classList.replace('bg-emerald-500', 'bg-amber-500');
-                    if (countdownPing) countdownPing.classList.replace('bg-emerald-400', 'bg-amber-400');
-                }
+                updateCountdownAppearance();
             }, 1000);
         }
 
@@ -470,19 +491,19 @@
                 qrImage.removeAttribute('src');
                 qrPanel.classList.add('hidden');
             }
-            numberRow.classList.toggle('hidden', isBanglaQr);
+            numberRow.classList.toggle('hidden', isBanglaQr || Boolean(qrUrl));
             document.getElementById('payment-instruction-heading').textContent = isBanglaQr
                 ? 'Scan the Bangla QR code to pay:'
-                : (qrUrl ? 'Scan the QR or send money to this number:' : 'Send money to this number:');
+                : (qrUrl ? 'Scan the QR code to pay:' : 'Send money to this number:');
             document.getElementById('payment-qr-caption').textContent = isBanglaQr
                 ? 'Bangla QR: scan with a supported bank or MFS app, then enter the invoice amount.'
-                : `Scan this ${providerName} QR using your bank or MFS app.`;
+                : `Scan this ${providerName} QR using your ${providerName} app, then pay the invoice amount.`;
             document.getElementById('bangla-qr-verification-note').classList.toggle('hidden', !isBanglaQr);
 
             activeAccountNumber = number;
             document.getElementById('active-account-number').textContent = number;
             document.getElementById('active-method-type-badge').textContent = isBanglaQr ? 'Bangla QR' : `${typeName}`;
-            document.getElementById('step-instruction-2').innerHTML = isBanglaQr
+            document.getElementById('step-instruction-2').innerHTML = (isBanglaQr || qrUrl)
                 ? `Enter the invoice amount <strong class="text-slate-900">৳ {{ invoice.amount }}</strong> and confirm in your app.`
                 : `Enter the number above and amount <strong class="text-slate-900">৳ {{ invoice.amount }}</strong>.`;
 
@@ -490,6 +511,7 @@
             const step1 = document.getElementById('step-instruction-1');
             let actionName = "Send Money";
             if (isBanglaQr) actionName = "Scan the Bangla QR code";
+            else if (qrUrl) actionName = "Scan the payment QR code";
             else if (typeRaw === 'MERCHANT') actionName = "Make Payment";
             else if (typeRaw === 'AGENT') actionName = "Cash Out";
             step1.innerHTML = `Open your ${providerName} app and select <strong>${actionName}</strong>.`;

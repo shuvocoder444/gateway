@@ -13,6 +13,7 @@ from .views import (
     merchant_integration_guide_view,
     merchant_payment_method_action,
     payment_method_qr_view,
+    merchant_logo_view,
     admin_dashboard_view,
     admin_action_api,
     dashboard_home,
@@ -45,6 +46,7 @@ urlpatterns = [
     path('dashboard/integration/', merchant_integration_guide_view, name='merchant-integration-guide'),
     path('api/v1/merchant/payment-method/', merchant_payment_method_action, name='merchant-payment-method-action'),
     path('payment-qr/<uuid:payment_method_id>/', payment_method_qr_view, name='payment-method-qr'),
+    path('merchant-logo/<uuid:merchant_id>/', merchant_logo_view, name='merchant-logo'),
 
     # Hosted Checkout Customer UI
     path('checkout/<uuid:reference_id>/', checkout_page_view, name='hosted-checkout'),

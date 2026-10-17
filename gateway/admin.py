@@ -78,6 +78,9 @@ class MerchantAdmin(admin.ModelAdmin):
         ('Tenant Profile', {
             'fields': ('id', 'owner', 'name', 'email', 'is_active')
         }),
+        ('Hosted Checkout Branding', {
+            'fields': ('checkout_display_name', 'logo', 'checkout_copyright', 'support_email', 'support_phone')
+        }),
         ('API Authentication & Security', {
             'description': 'Merchant credentials for API request authorization and HMAC signatures.',
             'fields': ('api_key', 'api_secret')
